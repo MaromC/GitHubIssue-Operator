@@ -1,0 +1,32 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - marom.dana.io.dana.io
+  resources:
+  - githubissues
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - marom.dana.io.dana.io
+  resources:
+  - githubissues/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - marom.dana.io.dana.io
+  resources:
+  - githubissues/status
+  verbs:
+  - get
+  - patch
+  - update
