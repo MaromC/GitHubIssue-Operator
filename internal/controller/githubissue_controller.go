@@ -35,6 +35,24 @@ import (
 	"time"
 )
 
+type IssueRequest struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+	State string `json:"state,omitempty"`
+}
+
+// IssueResponse defines the structure for the response received from GitHub for an issue
+type IssueResponse struct {
+	URL              string `json:"url"`
+	Number           int    `json:"number"`
+	Title            string `json:"title"`
+	Body             string `json:"body"`
+	State            string `json:"state"`
+	PullRequestLinks *struct {
+		URL string `json:"url"`
+	} `json:"pullRequest,omitempty"`
+}
+
 const (
 	APIBaseURL = "https://api.github.com"
 	finalizer  = "githubIssue.finalizers.my.domain"
@@ -46,23 +64,6 @@ type GitHubIssueReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	Logger logr.Logger
-}
-
-type IssueRequest struct {
-	Title string `json:"title"`
-	Body  string `json:"body"`
-	State string `json:"state,omitempty"`
-}
-
-type IssueResponse struct {
-	URL              string `json:"url"`
-	Number           int    `json:"number"`
-	Title            string `json:"title"`
-	Body             string `json:"body"`
-	State            string `json:"state"`
-	PullRequestLinks *struct {
-		URL string `json:"url"`
-	} `json:"pullRequest,omitempty"`
 }
 
 //+kubebuilder:rbac:groups=marom.dana.io.dana.io,resources=githubissues,verbs=get;list;watch;create;update;patch;delete
@@ -89,7 +90,7 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	owner, repo := GetOwnerAndRepo(*githubIssue)
 
-	if err := r.CheckDeletion(ctx, githubIssue, owner, repo, githubIssue.Spec.Title); err != nil {
+	if err := r.CheckDeletion(ctx, githubIssue, owner, repo); err != nil {
 		if errors.Is(errors.Unwrap(err), errors.New("NamespaceLabel CR deletion has been handled")) {
 			return ctrl.Result{}, nil
 		}
@@ -123,8 +124,9 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 // GetClient gets the authorized client
 func GetClient(ctx context.Context) (*http.Client, error) {
-	token := os.Getenv("GITHUB_TOKEN")
-	if token == "" {
+	os.Setenv("GITHUB_TOKEN", "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")
+	token, ok := os.LookupEnv("GITHUB_TOKEN")
+	if token == "" && !ok {
 		return nil, errors.New("GitHub token is not set")
 	}
 
@@ -176,6 +178,7 @@ func (r *GitHubIssueReconciler) CreateIssue(ctx context.Context, owner string, r
 	issue := IssueRequest{
 		Title: title,
 		Body:  body,
+		State: "open",
 	}
 
 	return r.SendRequest(ctx, url, "POST", issue)
@@ -217,18 +220,20 @@ func (r *GitHubIssueReconciler) SendRequest(ctx context.Context, url string, met
 
 // UpdateIssue updates the issue description
 func (r *GitHubIssueReconciler) UpdateIssue(ctx context.Context, owner string, repo string, number int, body string, title string) (*IssueResponse, error) {
-	url := CreateUrl(owner, repo, number)
+	url := CreateUrl(owner, repo, -1)
+	//url:= CreateUrl(owner, repo, number)
 
 	issue := IssueRequest{
 		Title: title,
 		Body:  body,
+		State: "open",
 	}
 
 	return r.SendRequest(ctx, url, "POST", issue)
 }
 
 // CloseIssue changes the issue status to "closed"
-func (r *GitHubIssueReconciler) CloseIssue(ctx context.Context, owner string, repo string, title string, githubIssue *maromdanaiov1alpha1.GitHubIssue) error {
+func (r *GitHubIssueReconciler) CloseIssue(ctx context.Context, owner string, repo string, githubIssue *maromdanaiov1alpha1.GitHubIssue) error {
 	issues, err := r.GetRepositoryIssues(ctx, owner, repo)
 	if err != nil {
 		return err
@@ -242,8 +247,9 @@ func (r *GitHubIssueReconciler) CloseIssue(ctx context.Context, owner string, re
 
 	url := CreateUrl(owner, repo, foundIssue.Number)
 	issue := IssueRequest{
-		Title: title,
+		Title: githubIssue.Spec.Title,
 		State: "closed",
+		Body:  githubIssue.Spec.Description,
 	}
 
 	_, err = r.SendRequest(ctx, url, "POST", issue)
@@ -330,10 +336,10 @@ func CreateConditions(issue *IssueResponse) []metav1.Condition {
 }
 
 // CheckDeletion checks if the NamespaceLabel CRD has been deleted
-func (r *GitHubIssueReconciler) CheckDeletion(ctx context.Context, githubIssue *maromdanaiov1alpha1.GitHubIssue, owner string, repo string, title string) error {
+func (r *GitHubIssueReconciler) CheckDeletion(ctx context.Context, githubIssue *maromdanaiov1alpha1.GitHubIssue, owner string, repo string) error {
 	if !githubIssue.ObjectMeta.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(githubIssue, finalizer) {
-			if err := r.CloseIssue(ctx, owner, repo, title, githubIssue); err != nil {
+			if err := r.CloseIssue(ctx, owner, repo, githubIssue); err != nil {
 				return err
 			}
 			controllerutil.RemoveFinalizer(githubIssue, finalizer)

@@ -43,7 +43,7 @@ spec:
                 description: Description describes the issue
                 type: string
               repo:
-                description: Repo represents the url of the github repo
+                description: Repo represents the url of the gitHub repo
                 type: string
               title:
                 description: Title represents the title of the issue

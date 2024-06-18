@@ -28,7 +28,7 @@ type GitHubIssueSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Repo represents the url of the github repo
+	// Repo represents the url of the gitHub repo
 	Repo string `json:"repo,omitempty"`
 	// Title represents the title of the issue
 	Title string `json:"title,omitempty"`

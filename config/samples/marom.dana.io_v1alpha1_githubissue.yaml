@@ -6,4 +6,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: githubissue-sample
 spec:
-  # TODO(user): Add fields here
+  repo: https://github.com/MaromC/GitHubIssue-Operator
+  title: "Example Issue"
+  description: "This is an example for an issue"
+
