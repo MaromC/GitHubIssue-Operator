@@ -22,36 +22,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-logr/logr"
-	"golang.org/x/oauth2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
 	"net/http"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 	"time"
 )
-
-type IssueRequest struct {
-	Title string `json:"title"`
-	Body  string `json:"body"`
-	State string `json:"state,omitempty"`
-}
-
-// IssueResponse defines the structure for the response received from GitHub for an issue
-type IssueResponse struct {
-	URL              string `json:"url"`
-	Number           int    `json:"number"`
-	Title            string `json:"title"`
-	Body             string `json:"body"`
-	State            string `json:"state"`
-	PullRequestLinks *struct {
-		URL string `json:"url"`
-	} `json:"pullRequest,omitempty"`
-}
 
 const (
 	APIBaseURL = "https://api.github.com"
@@ -62,8 +42,9 @@ const (
 // GitHubIssueReconciler reconciles a GitHubIssue object
 type GitHubIssueReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Logger logr.Logger
+	Scheme    *runtime.Scheme
+	Logger    logr.Logger
+	GetClient func(ctx context.Context) (*http.Client, error)
 }
 
 //+kubebuilder:rbac:groups=marom.dana.io.dana.io,resources=githubissues,verbs=get;list;watch;create;update;patch;delete
@@ -72,12 +53,10 @@ type GitHubIssueReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-//
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := r.Logger.WithValues("namespace", req.Namespace, "name", req.Name)
-
 	githubIssue := &maromdanaiov1alpha1.GitHubIssue{}
 	if err := r.Get(ctx, req.NamespacedName, githubIssue); err != nil {
 		if client.IgnoreNotFound(err) != nil {
@@ -122,25 +101,11 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return ctrl.Result{RequeueAfter: time.Minute}, nil
 }
 
-// GetClient gets the authorized client
-func GetClient(ctx context.Context) (*http.Client, error) {
-	os.Setenv("GITHUB_TOKEN", "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")
-	token, ok := os.LookupEnv("GITHUB_TOKEN")
-	if token == "" && !ok {
-		return nil, errors.New("GitHub token is not set")
-	}
-
-	sourceToken := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
-	)
-	return oauth2.NewClient(ctx, sourceToken), nil
-}
-
 // GetRepositoryIssues gets all the issues listed in the given repository
-func (r *GitHubIssueReconciler) GetRepositoryIssues(ctx context.Context, owner string, repo string) ([]IssueResponse, error) {
+func (r *GitHubIssueReconciler) GetRepositoryIssues(ctx context.Context, owner string, repo string) ([]maromdanaiov1alpha1.IssueResponse, error) {
 	url := CreateUrl(owner, repo, EmptyOther)
 
-	githubClient, err := GetClient(ctx)
+	githubClient, err := r.GetClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +128,7 @@ func (r *GitHubIssueReconciler) GetRepositoryIssues(ctx context.Context, owner s
 		return nil, err
 	}
 
-	var issues []IssueResponse
+	var issues []maromdanaiov1alpha1.IssueResponse
 	if err := json.NewDecoder(response.Body).Decode(&issues); err != nil {
 		return nil, err
 	}
@@ -172,10 +137,10 @@ func (r *GitHubIssueReconciler) GetRepositoryIssues(ctx context.Context, owner s
 }
 
 // CreateIssue creates an issue
-func (r *GitHubIssueReconciler) CreateIssue(ctx context.Context, owner string, repo string, title string, body string) (*IssueResponse, error) {
+func (r *GitHubIssueReconciler) CreateIssue(ctx context.Context, owner string, repo string, title string, body string) (*maromdanaiov1alpha1.IssueResponse, error) {
 	url := CreateUrl(owner, repo, EmptyOther)
 
-	issue := IssueRequest{
+	issue := maromdanaiov1alpha1.IssueRequest{
 		Title: title,
 		Body:  body,
 		State: "open",
@@ -185,8 +150,8 @@ func (r *GitHubIssueReconciler) CreateIssue(ctx context.Context, owner string, r
 }
 
 // SendRequest sends a request to github
-func (r *GitHubIssueReconciler) SendRequest(ctx context.Context, url string, method string, body interface{}) (*IssueResponse, error) {
-	githubClient, err := GetClient(ctx)
+func (r *GitHubIssueReconciler) SendRequest(ctx context.Context, url string, method string, body interface{}) (*maromdanaiov1alpha1.IssueResponse, error) {
+	githubClient, err := r.GetClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +175,7 @@ func (r *GitHubIssueReconciler) SendRequest(ctx context.Context, url string, met
 
 	defer response.Body.Close()
 
-	var result IssueResponse
+	var result maromdanaiov1alpha1.IssueResponse
 	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
 		return nil, err
 	}
@@ -219,11 +184,10 @@ func (r *GitHubIssueReconciler) SendRequest(ctx context.Context, url string, met
 }
 
 // UpdateIssue updates the issue description
-func (r *GitHubIssueReconciler) UpdateIssue(ctx context.Context, owner string, repo string, number int, body string, title string) (*IssueResponse, error) {
-	url := CreateUrl(owner, repo, -1)
-	//url:= CreateUrl(owner, repo, number)
+func (r *GitHubIssueReconciler) UpdateIssue(ctx context.Context, owner string, repo string, number int, body string, title string) (*maromdanaiov1alpha1.IssueResponse, error) {
+	url := CreateUrl(owner, repo, number)
 
-	issue := IssueRequest{
+	issue := &maromdanaiov1alpha1.IssueRequest{
 		Title: title,
 		Body:  body,
 		State: "open",
@@ -246,7 +210,7 @@ func (r *GitHubIssueReconciler) CloseIssue(ctx context.Context, owner string, re
 	}
 
 	url := CreateUrl(owner, repo, foundIssue.Number)
-	issue := IssueRequest{
+	issue := &maromdanaiov1alpha1.IssueRequest{
 		Title: githubIssue.Spec.Title,
 		State: "closed",
 		Body:  githubIssue.Spec.Description,
@@ -260,32 +224,8 @@ func (r *GitHubIssueReconciler) CloseIssue(ctx context.Context, owner string, re
 	return nil
 }
 
-// CreateUrl returns the gitHub url we need to reach
-func CreateUrl(owner string, repo string, other int) string {
-	if other != -1 {
-		return fmt.Sprintf("%s/repos/%s/%s/issues/%d", APIBaseURL, owner, repo, other)
-
-	}
-	return fmt.Sprintf("%s/repos/%s/%s/issues", APIBaseURL, owner, repo)
-}
-
-func GetOwnerAndRepo(githubIssue maromdanaiov1alpha1.GitHubIssue) (string, string) {
-	repoParts := strings.Split(githubIssue.Spec.Repo, "/")
-	owner := repoParts[len(repoParts)-2]
-	repo := repoParts[len(repoParts)-1]
-	return owner, repo
-}
-
-func FindIssue(issues []IssueResponse, githubIssue *maromdanaiov1alpha1.GitHubIssue) *IssueResponse {
-	for _, issue := range issues {
-		if issue.Title == githubIssue.Spec.Title {
-			return &issue
-		}
-	}
-	return nil
-}
-
-func (r *GitHubIssueReconciler) HandleIssues(foundIssue *IssueResponse, ctx context.Context, owner string, repo string, githubIssue *maromdanaiov1alpha1.GitHubIssue) (*IssueResponse, error) {
+// HandleIssues creates an issue with the needed data if it dosent exist, if it does, it updated the existing issue
+func (r *GitHubIssueReconciler) HandleIssues(foundIssue *maromdanaiov1alpha1.IssueResponse, ctx context.Context, owner string, repo string, githubIssue *maromdanaiov1alpha1.GitHubIssue) (*maromdanaiov1alpha1.IssueResponse, error) {
 	if foundIssue == nil {
 		newIssue, err := r.CreateIssue(ctx, owner, repo, githubIssue.Spec.Title, githubIssue.Spec.Description)
 		if err != nil {
@@ -305,7 +245,8 @@ func (r *GitHubIssueReconciler) HandleIssues(foundIssue *IssueResponse, ctx cont
 	return nil, nil
 }
 
-func CreateConditions(issue *IssueResponse) []metav1.Condition {
+// CreateConditions create the conditions for the issue
+func CreateConditions(issue *maromdanaiov1alpha1.IssueResponse) []metav1.Condition {
 	conditions := []metav1.Condition{
 		{
 			Type:               "OpenIssue",
@@ -358,6 +299,33 @@ func (r *GitHubIssueReconciler) CheckDeletion(ctx context.Context, githubIssue *
 		}
 	}
 
+	return nil
+}
+
+// CreateUrl returns the gitHub url we need to send / get the request to / from
+func CreateUrl(owner string, repo string, other int) string {
+	if other != -1 {
+		return fmt.Sprintf("%s/repos/%s/%s/issues/%d", APIBaseURL, owner, repo, other)
+
+	}
+	return fmt.Sprintf("%s/repos/%s/%s/issues", APIBaseURL, owner, repo)
+}
+
+// GetOwnerAndRepo returns the owner and repo parts from the githubIssue repo string
+func GetOwnerAndRepo(githubIssue maromdanaiov1alpha1.GitHubIssue) (string, string) {
+	repoParts := strings.Split(githubIssue.Spec.Repo, "/")
+	owner := repoParts[len(repoParts)-2]
+	repo := repoParts[len(repoParts)-1]
+	return owner, repo
+}
+
+// FindIssue finds the issue in the lissues list with the same title as the one in thr githubIssue
+func FindIssue(issues []maromdanaiov1alpha1.IssueResponse, githubIssue *maromdanaiov1alpha1.GitHubIssue) *maromdanaiov1alpha1.IssueResponse {
+	for _, issue := range issues {
+		if issue.Title == githubIssue.Spec.Title {
+			return &issue
+		}
+	}
 	return nil
 }
 

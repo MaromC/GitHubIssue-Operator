@@ -470,4 +470,5 @@ metadata:
   namespace: github-operator-system
 type: Opaque
 data:
-  token: Z2l0aHViX3BhdF8xMUFUWTdaSkkwTXROVUJ3VWtLOGgzX243Z3dST2xsVTJGTWRBR1JPc1RuZnp0RjRpcGpnTDNYN1o3ZlVYeFloZnRSUEtWN0tTR3NuN2tOY1JC
+  token: Z2l0aHViX3BhdF8xMUFUWTdaSkkwa2Y2T3h0aTJYNldpX3BqRmNKZDg2THR0VnFleTA5M0l2Qm8zQmI1SkxuNlJLT05HSnNyNnlWMzlQR1ZKRk1YVGdIVlJHQnd2
+

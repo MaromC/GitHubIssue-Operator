@@ -17,8 +17,12 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"crypto/tls"
+	"errors"
 	"flag"
+	"golang.org/x/oauth2"
+	"net/http"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -123,8 +127,9 @@ func main() {
 	}
 
 	if err = (&controller.GitHubIssueReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		GetClient: GetClientFunc,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GitHubIssue")
 		os.Exit(1)
@@ -145,4 +150,17 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+// GetClientFunc gets the authorized client
+func GetClientFunc(ctx context.Context) (*http.Client, error) {
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		return nil, errors.New("GitHub token is not set")
+	}
+
+	sourceToken := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token},
+	)
+	return oauth2.NewClient(ctx, sourceToken), nil
 }

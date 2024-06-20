@@ -38,9 +38,29 @@ type GitHubIssueSpec struct {
 
 // GitHubIssueStatus defines the observed state of GitHubIssue
 type GitHubIssueStatus struct {
-	// Important: Run "make" to regenerate code after modifying this file
-
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+// PullRequestLinks defines the structure for pull request links
+type PullRequestLinks struct {
+	URL string `json:"url"`
+}
+
+// IssueRequest defines the structure for the request sent
+type IssueRequest struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+	State string `json:"state,omitempty"`
+}
+
+// IssueResponse defines the structure for the response given back
+type IssueResponse struct {
+	URL              string            `json:"url"`
+	Number           int               `json:"number"`
+	Title            string            `json:"title"`
+	Body             string            `json:"body"`
+	State            string            `json:"state"`
+	PullRequestLinks *PullRequestLinks `json:"pullRequest,omitempty"`
 }
 
 //+kubebuilder:object:root=true
