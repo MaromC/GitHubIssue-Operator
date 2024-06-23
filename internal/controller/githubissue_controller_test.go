@@ -173,7 +173,14 @@ var _ = Describe("GitHubIssue Controller", func() {
 			getClient := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/1", 1)
 
 			By("Reconciling the created resource")
-			err := reconcileGitHubIssue(getClient)
+			controllerReconciler := &GitHubIssueReconciler{
+				Client:    k8sClient,
+				Scheme:    k8sClient.Scheme(),
+				GetClient: getClient,
+			}
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Verifying the issue description was updated")
@@ -189,12 +196,19 @@ var _ = Describe("GitHubIssue Controller", func() {
 		It("should handle missing GitHub token", func() {
 			By("Setting up the mocked GitHub client with no token")
 
-			mockGetClient := func(ctx context.Context) (*http.Client, error) {
+			getClient := func(ctx context.Context) (*http.Client, error) {
 				return nil, errors.New("GitHub token is not set")
 			}
 
 			By("Reconciling the created resource")
-			err := reconcileGitHubIssue(mockGetClient)
+			controllerReconciler := &GitHubIssueReconciler{
+				Client:    k8sClient,
+				Scheme:    k8sClient.Scheme(),
+				GetClient: getClient,
+			}
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
 
 			By("Verifying the correct error is returned")
 			Expect(err).To(HaveOccurred())
@@ -209,7 +223,14 @@ var _ = Describe("GitHubIssue Controller", func() {
 			getClient := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/2", 2)
 
 			By("Reconciling the created resource")
-			err := reconcileGitHubIssue(getClient)
+			controllerReconciler := &GitHubIssueReconciler{
+				Client:    k8sClient,
+				Scheme:    k8sClient.Scheme(),
+				GetClient: getClient,
+			}
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Deleting the GitHubIssue resource")
@@ -239,7 +260,14 @@ var _ = Describe("GitHubIssue Controller", func() {
 			}
 
 			By("Reconciling the created resource")
-			err := reconcileGitHubIssue(getClient)
+			controllerReconciler := &GitHubIssueReconciler{
+				Client:    k8sClient,
+				Scheme:    k8sClient.Scheme(),
+				GetClient: getClient,
+			}
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
 
 			By("Verifying the correct error is returned")
 			Expect(err).To(HaveOccurred())
@@ -278,7 +306,14 @@ var _ = Describe("GitHubIssue Controller", func() {
 			}
 
 			By("Reconciling the created resource")
-			err := reconcileGitHubIssue(getClient)
+			controllerReconciler := &GitHubIssueReconciler{
+				Client:    k8sClient,
+				Scheme:    k8sClient.Scheme(),
+				GetClient: getClient,
+			}
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
 
 			By("Verifying the correct error is returned")
 			Expect(err).To(HaveOccurred())
