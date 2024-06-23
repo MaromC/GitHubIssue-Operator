@@ -276,7 +276,7 @@ func CreateConditions(issue *maromdanaiov1alpha1.IssueResponse) []metav1.Conditi
 	return conditions
 }
 
-// CheckDeletion checks if the GitHubIssue CRD has been deleted and if so handles it
+// CheckDeletion checks if the GitHubIssue CRD has been deleted and if deleted handles it
 func (r *GitHubIssueReconciler) CheckDeletion(ctx context.Context, githubIssue *maromdanaiov1alpha1.GitHubIssue, owner string, repo string) error {
 	if !githubIssue.ObjectMeta.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(githubIssue, finalizer) {
