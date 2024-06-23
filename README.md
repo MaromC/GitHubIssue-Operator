@@ -10,6 +10,20 @@ The GitHubIssue operator is meant to create or update issue on GitHub
 - Access to a Kubernetes v1.11.3+ cluster.
 
 ### To Run The Controller
+**Clone the project from GitHub:**
+```sh
+git clone https://github.com/<your-repo>/github-operator.git
+```
+
+**Enter the project directory:**
+```sh
+cd Github-Operator
+```
+
+**Run the controller:**
+```sh
+make run
+```
 
 ### To Deploy on the cluster
 **Build and push your image to the location specified by `IMG`:**
