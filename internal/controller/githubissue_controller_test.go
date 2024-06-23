@@ -19,12 +19,12 @@ package controller
 import (
 	"context"
 	"encoding/json"
-	errors2 "errors"
+	"errors"
 	"github.com/migueleliasweb/go-github-mock/src/mock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"golang.org/x/oauth2"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
@@ -73,7 +73,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 			return func(ctx context.Context) (*http.Client, error) {
 				token := os.Getenv("GITHUB_TOKEN")
 				if token == "" {
-					return nil, errors2.New("GitHub token is not set")
+					return nil, errors.New("GitHub token is not set")
 				}
 				sourceToken := oauth2.StaticTokenSource(
 					&oauth2.Token{AccessToken: token},
@@ -99,7 +99,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind GitHubIssue")
 			err := k8sClient.Get(ctx, typeNamespacedName, githubissue)
-			if err != nil && errors.IsNotFound(err) {
+			if err != nil && apierrors.IsNotFound(err) {
 				resource := &maromdanaiov1alpha1.GitHubIssue{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
@@ -190,7 +190,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 			By("Setting up the mocked GitHub client with no token")
 
 			mockGetClient := func(ctx context.Context) (*http.Client, error) {
-				return nil, errors2.New("GitHub token is not set")
+				return nil, errors.New("GitHub token is not set")
 			}
 
 			By("Reconciling the created resource")
@@ -218,7 +218,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 			By("Verifying the GitHubIssue resource is deleted")
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, typeNamespacedName, githubissue)
-				return errors.IsNotFound(err)
+				return apierrors.IsNotFound(err)
 			}).Should(BeTrue())
 
 		})
