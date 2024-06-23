@@ -222,5 +222,68 @@ var _ = Describe("GitHubIssue Controller", func() {
 			}).Should(BeTrue())
 
 		})
+		// Test #5
+		It("should handle a failed attempt to create a real GitHub issue", func() {
+
+			By("Setting up the mocked GitHub client to return a failure for post")
+			getClient := func(ctx context.Context) (*http.Client, error) {
+				mockedHTTPClient := mock.NewMockedHTTPClient(
+					mock.WithRequestMatchHandler(
+						mock.PostReposIssuesByOwnerByRepo,
+						http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							http.Error(w, "Failed to create issue", http.StatusInternalServerError)
+						}),
+					),
+				)
+				return &http.Client{Transport: mockedHTTPClient.Transport}, nil
+			}
+
+			By("Reconciling the created resource")
+			err := reconcileGitHubIssue(getClient)
+
+			By("Verifying the correct error is returned")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("Failed to create issue"))
+		})
+
+		// Test #6
+		It("should handle a failed attempt to update a GitHub issue", func() {
+
+			By("Setting up the mocked GitHub client to return a failure for post")
+			issues := []maromdanaiov1alpha1.IssueResponse{
+				{
+					URL:    "https://api.github.com/repos/owner/repo/issues/1",
+					Number: 1,
+					Title:  "Test Issue",
+					Body:   "Old description",
+					State:  "open",
+				},
+			}
+			getClient := func(ctx context.Context) (*http.Client, error) {
+				mockedHTTPClient := mock.NewMockedHTTPClient(
+					mock.WithRequestMatchHandler(
+						mock.GetReposIssuesByOwnerByRepo,
+						http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							_ = json.NewEncoder(w).Encode(issues)
+						}),
+					),
+					mock.WithRequestMatchHandler(
+						mock.PostReposIssuesByOwnerByRepo,
+						http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							http.Error(w, "Failed to update issue", http.StatusInternalServerError)
+						}),
+					),
+				)
+				return &http.Client{Transport: mockedHTTPClient.Transport}, nil
+			}
+
+			By("Reconciling the created resource")
+			err := reconcileGitHubIssue(getClient)
+
+			By("Verifying the correct error is returned")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("Failed to update issue"))
+		})
+
 	})
 })
