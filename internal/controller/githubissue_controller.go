@@ -109,7 +109,7 @@ func (r *GitHubIssueReconciler) GetRepositoryIssues(ctx context.Context, owner s
 		return nil, err
 	}
 
-	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func (r *GitHubIssueReconciler) CreateIssue(ctx context.Context, owner string, r
 		State: "open",
 	}
 
-	return r.SendRequest(ctx, url, "POST", issue)
+	return r.SendRequest(ctx, url, http.MethodPost, issue)
 }
 
 // SendRequest sends a request to github
@@ -192,7 +192,7 @@ func (r *GitHubIssueReconciler) UpdateIssue(ctx context.Context, owner string, r
 		State: "open",
 	}
 
-	return r.SendRequest(ctx, url, "POST", issue)
+	return r.SendRequest(ctx, url, http.MethodPost, issue)
 }
 
 // CloseIssue changes the issue status to "closed"
@@ -215,7 +215,7 @@ func (r *GitHubIssueReconciler) CloseIssue(ctx context.Context, owner string, re
 		Body:  githubIssue.Spec.Description,
 	}
 
-	_, err = r.SendRequest(ctx, url, "POST", issue)
+	_, err = r.SendRequest(ctx, url, http.MethodPost, issue)
 	if err != nil {
 		r.Logger.Error(err, "Failed to send request")
 		return err
