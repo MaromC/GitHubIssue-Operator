@@ -78,15 +78,15 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	// if the enable-http2 flag is false (the default), http/2 should be disabled
-	// due to its vulnerabilities. More specifically, disabling http/2 will
+	// if the enable-http2 flag is false (the default), GithubHttp/2 should be disabled
+	// due to its vulnerabilities. More specifically, disabling GithubHttp/2 will
 	// prevent from being vulnerable to the HTTP/2 Stream Cancellation and
 	// Rapid Reset CVEs. For more information see:
 	// - https://github.com/advisories/GHSA-qppj-fm5r-hxr3
 	// - https://github.com/advisories/GHSA-4374-p667-p6c8
 	disableHTTP2 := func(c *tls.Config) {
-		setupLog.Info("disabling http/2")
-		c.NextProtos = []string{"http/1.1"}
+		setupLog.Info("disabling GithubHttp/2")
+		c.NextProtos = []string{"GithubHttp/1.1"}
 	}
 
 	tlsOpts := []func(*tls.Config){}
