@@ -25,3 +25,6 @@ go.work
 *.swp
 *.swo
 *~
+
+#filebeat files
+filebeat-7.17.22-linux-x86_64/*
