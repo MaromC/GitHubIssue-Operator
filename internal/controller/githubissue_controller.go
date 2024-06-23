@@ -36,7 +36,6 @@ import (
 const (
 	APIBaseURL = "https://api.github.com"
 	finalizer  = "githubIssue.finalizers.my.domain"
-	EmptyOther = -1
 )
 
 // GitHubIssueReconciler reconciles a GitHubIssue object
@@ -103,7 +102,7 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 // GetRepositoryIssues gets all the issues listed in the given repository
 func (r *GitHubIssueReconciler) GetRepositoryIssues(ctx context.Context, owner string, repo string) ([]maromdanaiov1alpha1.IssueResponse, error) {
-	url := CreateUrl(owner, repo, EmptyOther)
+	url := CreateUrl(owner, repo)
 
 	githubClient, err := r.GetClient(ctx)
 	if err != nil {
@@ -138,7 +137,7 @@ func (r *GitHubIssueReconciler) GetRepositoryIssues(ctx context.Context, owner s
 
 // CreateIssue creates an issue
 func (r *GitHubIssueReconciler) CreateIssue(ctx context.Context, owner string, repo string, title string, body string) (*maromdanaiov1alpha1.IssueResponse, error) {
-	url := CreateUrl(owner, repo, EmptyOther)
+	url := CreateUrl(owner, repo)
 
 	issue := maromdanaiov1alpha1.IssueRequest{
 		Title: title,
@@ -185,7 +184,7 @@ func (r *GitHubIssueReconciler) SendRequest(ctx context.Context, url string, met
 
 // UpdateIssue updates the issue description
 func (r *GitHubIssueReconciler) UpdateIssue(ctx context.Context, owner string, repo string, number int, body string, title string) (*maromdanaiov1alpha1.IssueResponse, error) {
-	url := CreateUrl(owner, repo, number)
+	url := CreateUrlWithIssueNumber(owner, repo, number)
 
 	issue := &maromdanaiov1alpha1.IssueRequest{
 		Title: title,
@@ -209,7 +208,7 @@ func (r *GitHubIssueReconciler) CloseIssue(ctx context.Context, owner string, re
 		return fmt.Errorf("issue not found")
 	}
 
-	url := CreateUrl(owner, repo, foundIssue.Number)
+	url := CreateUrlWithIssueNumber(owner, repo, foundIssue.Number)
 	issue := &maromdanaiov1alpha1.IssueRequest{
 		Title: githubIssue.Spec.Title,
 		State: "closed",
@@ -303,12 +302,13 @@ func (r *GitHubIssueReconciler) CheckDeletion(ctx context.Context, githubIssue *
 }
 
 // CreateUrl returns the gitHub url we need to send / get the request to / from
-func CreateUrl(owner string, repo string, other int) string {
-	if other != -1 {
-		return fmt.Sprintf("%s/repos/%s/%s/issues/%d", APIBaseURL, owner, repo, other)
+func CreateUrl(owner string, repo string) string {
+	return fmt.Sprintf("%s/repos/%s/%s/issues/", APIBaseURL, owner, repo)
+}
 
-	}
-	return fmt.Sprintf("%s/repos/%s/%s/issues", APIBaseURL, owner, repo)
+// CreateUrlWithIssueNumber returns the gitHub url we need to send / get the request to / from with a specific issue number
+func CreateUrlWithIssueNumber(owner string, repo string, number int) string {
+	return fmt.Sprintf("%s/repos/%s/%s/issues/%d", APIBaseURL, owner, repo, number)
 }
 
 // GetOwnerAndRepo returns the owner and repo parts from the githubIssue repo string
