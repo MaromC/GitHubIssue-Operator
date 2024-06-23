@@ -82,7 +82,7 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	foundIssue := FindIssue(issues, githubIssue)
+	foundIssue := FindIssue(issues, githubIssue.Spec.Title)
 
 	handledIssue, err := r.HandleIssues(foundIssue, ctx, owner, repo, githubIssue)
 	if err != nil {
@@ -203,7 +203,7 @@ func (r *GitHubIssueReconciler) CloseIssue(ctx context.Context, owner string, re
 		return err
 	}
 
-	foundIssue := FindIssue(issues, githubIssue)
+	foundIssue := FindIssue(issues, githubIssue.Spec.Title)
 
 	if foundIssue == nil {
 		return fmt.Errorf("issue not found")
@@ -320,9 +320,9 @@ func GetOwnerAndRepo(githubIssue maromdanaiov1alpha1.GitHubIssue) (string, strin
 }
 
 // FindIssue finds the issue in the lissues list with the same title as the one in thr githubIssue
-func FindIssue(issues []maromdanaiov1alpha1.IssueResponse, githubIssue *maromdanaiov1alpha1.GitHubIssue) *maromdanaiov1alpha1.IssueResponse {
+func FindIssue(issues []maromdanaiov1alpha1.IssueResponse, title string) *maromdanaiov1alpha1.IssueResponse {
 	for _, issue := range issues {
-		if issue.Title == githubIssue.Spec.Title {
+		if issue.Title == title {
 			return &issue
 		}
 	}
