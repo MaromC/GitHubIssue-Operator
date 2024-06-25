@@ -20,10 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	corev1 "k8s.io/api/core/v1"
 	"net/http"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"os"
 
 	"github.com/migueleliasweb/go-github-mock/src/mock"
 	. "github.com/onsi/ginkgo/v2"
@@ -48,10 +46,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 		}
 		githubissue := &maromdanaiov1alpha1.GitHubIssue{}
 
-		var secretName = "github-token"
-		var secretKey = "token"
-
-		setUpMockedClient := func(issues []maromdanaiov1alpha1.IssueResponse, url string, number int) func(ctx context.Context, client client.Client, namespace string) (*http.Client, error) {
+		setUpMockedClient := func(issues []maromdanaiov1alpha1.IssueResponse, url string, number int) func(ctx context.Context) (*http.Client, error) {
 			mockedHTTPClient := mock.NewMockedHTTPClient(
 				mock.WithRequestMatchHandler(
 					mock.GetReposIssuesByOwnerByRepo,
@@ -76,27 +71,21 @@ var _ = Describe("GitHubIssue Controller", func() {
 				),
 			)
 
-			return func(ctx context.Context, client client.Client, namespace string) (*http.Client, error) {
-				secret := &corev1.Secret{}
-				err := client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, secret)
-				if err != nil {
-					return nil, fmt.Errorf("failed to get secret %s: %w", secretName, err)
+			return func(ctx context.Context) (*http.Client, error) {
+				token := os.Getenv("GITHUB_TOKEN")
+				if token == "" {
+					return nil, errors.New("GitHub token is not set")
 				}
-
-				token, ok := secret.Data[secretKey]
-				if !ok {
-					return nil, fmt.Errorf("token not found in secret %s/%s", secretName, secretKey)
-				}
-
-				sourceToken := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: string(token)})
-				gitClient := oauth2.NewClient(ctx, sourceToken)
-				gitClient.Transport = mockedHTTPClient.Transport
-
-				return gitClient, nil
+				sourceToken := oauth2.StaticTokenSource(
+					&oauth2.Token{AccessToken: token},
+				)
+				client := oauth2.NewClient(ctx, sourceToken)
+				client.Transport = mockedHTTPClient.Transport
+				return client, nil
 			}
 		}
 
-		reconcileGitHubIssue := func(getClient func(ctx context.Context, client client.Client, namespace string) (*http.Client, error)) error {
+		reconcileGitHubIssue := func(getClient func(ctx context.Context) (*http.Client, error)) error {
 			controllerReconciler := &GitHubIssueReconciler{
 				Client:    k8sClient,
 				Scheme:    k8sClient.Scheme(),
@@ -208,7 +197,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 		It("should handle missing GitHub token", func() {
 			By("Setting up the mocked GitHub client with no token")
 
-			getClient := func(ctx context.Context, client client.Client, namespace string) (*http.Client, error) {
+			getClient := func(ctx context.Context) (*http.Client, error) {
 				return nil, errors.New("GitHub token is not set")
 			}
 
@@ -259,7 +248,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 		It("should handle a failed attempt to create a real GitHub issue", func() {
 
 			By("Setting up the mocked GitHub client to return a failure for post")
-			getClient := func(ctx context.Context, client client.Client, namespace string) (*http.Client, error) {
+			getClient := func(ctx context.Context) (*http.Client, error) {
 				mockedHTTPClient := mock.NewMockedHTTPClient(
 					mock.WithRequestMatchHandler(
 						mock.PostReposIssuesByOwnerByRepo,
@@ -299,7 +288,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 					State:  "open",
 				},
 			}
-			getClient := func(ctx context.Context, client client.Client, namespace string) (*http.Client, error) {
+			getClient := func(ctx context.Context) (*http.Client, error) {
 				mockedHTTPClient := mock.NewMockedHTTPClient(
 					mock.WithRequestMatchHandler(
 						mock.GetReposIssuesByOwnerByRepo,
