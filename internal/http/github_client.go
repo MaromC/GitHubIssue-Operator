@@ -11,7 +11,15 @@ import (
 )
 
 var (
-	APIBaseURL = "https://api.github.com"
+	APIBaseURL       = "https://api.github.com"
+	accept           = "Accept"
+	acceptValue      = "application/vnd.github.v3+json"
+	contentType      = "Content-Type"
+	contentTypeValue = "application/json"
+	open             = "open"
+	closed           = "closed"
+	url              = "%s/repos/%s/%s/issues/"
+	urlWithNumber    = "%s/repos/%s/%s/issues/%d"
 )
 
 type GitHubClient struct {
@@ -20,7 +28,7 @@ type GitHubClient struct {
 
 // GetRepositoryIssues gets all the issues listed in the given repository.
 func (r *GitHubClient) GetRepositoryIssues(ctx context.Context, owner string, repo string, logger logr.Logger) ([]maromdanaiov1alpha1.IssueResponse, error) {
-	url := CreateUrl(owner, repo)
+	url := createUrl(owner, repo)
 
 	githubClient, err := r.GetClient(ctx)
 	if err != nil {
@@ -55,7 +63,7 @@ func (r *GitHubClient) GetRepositoryIssues(ctx context.Context, owner string, re
 
 // CreateIssue creates an issue.
 func (r *GitHubClient) CreateIssue(ctx context.Context, owner string, repo string, title string, body string) (*maromdanaiov1alpha1.IssueResponse, error) {
-	url := CreateUrl(owner, repo)
+	url := createUrl(owner, repo)
 
 	issue := maromdanaiov1alpha1.IssueRequest{
 		Title: title,
@@ -82,8 +90,8 @@ func (r *GitHubClient) SendRequest(ctx context.Context, url string, method strin
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(accept, acceptValue)
+	req.Header.Set(contentType, contentTypeValue)
 
 	response, err := githubClient.Do(req)
 	if err != nil {
@@ -102,12 +110,12 @@ func (r *GitHubClient) SendRequest(ctx context.Context, url string, method strin
 
 // UpdateIssue updates the issue description.
 func (r *GitHubClient) UpdateIssue(ctx context.Context, owner string, repo string, number int, body string, title string) (*maromdanaiov1alpha1.IssueResponse, error) {
-	url := CreateUrlWithIssueNumber(owner, repo, number)
+	url := createUrlWithIssueNumber(owner, repo, number)
 
 	issue := &maromdanaiov1alpha1.IssueRequest{
 		Title: title,
 		Body:  body,
-		State: "open",
+		State: open,
 	}
 
 	return r.SendRequest(ctx, url, http.MethodPost, issue)
@@ -126,10 +134,10 @@ func (r *GitHubClient) CloseIssue(ctx context.Context, owner string, repo string
 		return fmt.Errorf("issue not found")
 	}
 
-	url := CreateUrlWithIssueNumber(owner, repo, foundIssue.Number)
+	url := createUrlWithIssueNumber(owner, repo, foundIssue.Number)
 	issue := &maromdanaiov1alpha1.IssueRequest{
 		Title: githubIssue.Spec.Title,
-		State: "closed",
+		State: closed,
 		Body:  githubIssue.Spec.Description,
 	}
 
@@ -141,14 +149,14 @@ func (r *GitHubClient) CloseIssue(ctx context.Context, owner string, repo string
 	return nil
 }
 
-// CreateUrl returns the gitHub url we need to send / get the request to / from.
-func CreateUrl(owner string, repo string) string {
-	return fmt.Sprintf("%s/repos/%s/%s/issues/", APIBaseURL, owner, repo)
+// createUrl returns the gitHub url we need to send / get the request to / from.
+func createUrl(owner string, repo string) string {
+	return fmt.Sprintf(url, APIBaseURL, owner, repo)
 }
 
-// CreateUrlWithIssueNumber returns the gitHub url we need to send / get the request to / from with a specific issue number.
-func CreateUrlWithIssueNumber(owner string, repo string, number int) string {
-	return fmt.Sprintf("%s/repos/%s/%s/issues/%d", APIBaseURL, owner, repo, number)
+// createUrlWithIssueNumber returns the gitHub url we need to send / get the request to / from with a specific issue number.
+func createUrlWithIssueNumber(owner string, repo string, number int) string {
+	return fmt.Sprintf(urlWithNumber, APIBaseURL, owner, repo, number)
 }
 
 // FindIssue finds the issue in the lissues list with the same title as the one in thr githubIssue.

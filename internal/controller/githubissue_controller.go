@@ -33,7 +33,12 @@ import (
 )
 
 const (
-	finalizer = "githubIssue.finalizers.my.domain"
+	finalizer      = "githubIssue.finalizers.my.domain"
+	issueHasPr     = "IssueHasPR"
+	hasPrLink      = "IssueHasAPRLink"
+	hasPrMessage   = "Issue has a PR"
+	hasNoPr        = "IssueHasNoPR"
+	hasNoPrMessage = "Issue does not have a PR"
 )
 
 // GitHubIssueReconciler reconciles a GitHubIssue object
@@ -134,20 +139,20 @@ func CreateConditions(issue *maromdanaiov1alpha1.IssueResponse) []metav1.Conditi
 	}
 	if issue.PullRequestLinks != nil {
 		conditions = append(conditions, metav1.Condition{
-			Type:               "IssueHasPR",
+			Type:               issueHasPr,
 			Status:             metav1.ConditionTrue,
 			LastTransitionTime: metav1.Now(),
-			Reason:             "IssueHasAPRLink",
-			Message:            "Issue has a PR",
+			Reason:             hasPrLink,
+			Message:            hasPrMessage,
 		})
 		return conditions
 	}
 	conditions = append(conditions, metav1.Condition{
-		Type:               "IssueHasPR",
+		Type:               issueHasPr,
 		Status:             metav1.ConditionFalse,
 		LastTransitionTime: metav1.Now(),
-		Reason:             "IssueHasNoNoPR",
-		Message:            "Issue does not have a PR",
+		Reason:             hasNoPr,
+		Message:            hasNoPrMessage,
 	})
 	return conditions
 }
