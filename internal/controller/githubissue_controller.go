@@ -48,10 +48,12 @@ const (
 // GitHubIssueReconciler reconciles a GitHubIssue object
 type GitHubIssueReconciler struct {
 	client.Client
-	Scheme    *runtime.Scheme
-	Logger    logr.Logger
-	GetClient func(ctx context.Context) (*http.Client, error)
-	GitClient gitclient.GitClient
+	Scheme     *runtime.Scheme
+	Logger     logr.Logger
+	GetClient  func(ctx context.Context) (*http.Client, error)
+	GitClient  gitclient.GitClient
+	SecretName string
+	SecretKey  string
 }
 
 //+kubebuilder:rbac:groups=marom.dana.io.dana.io,resources=githubissues,verbs=get;list;watch;create;update;patch;delete

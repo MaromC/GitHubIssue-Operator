@@ -29,6 +29,7 @@ type GitHubIssueSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Repo represents the url of the gitHub repo
+	// +kubebuilder:validation:Pattern:'^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$'
 	Repo string `json:"repo,omitempty"`
 	// Title represents the title of the issue
 	Title string `json:"title,omitempty"`
