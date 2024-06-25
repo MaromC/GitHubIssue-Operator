@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -165,7 +164,7 @@ func main() {
 }
 
 // GetClientFunc gets the authorized client
-func GetClientFunc(ctx context.Context, client client.Client, namespace string) (*http.Client, error) {
+func GetClientFunc(ctx context.Context, client *controller.GitHubIssueReconciler, namespace string) (*http.Client, error) {
 	secret := &corev1.Secret{}
 	err := client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, secret)
 	if err != nil {
