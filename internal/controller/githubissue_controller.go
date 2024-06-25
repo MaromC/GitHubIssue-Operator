@@ -19,17 +19,15 @@ package controller
 import (
 	"context"
 	"errors"
-	"net/http"
-	"strings"
-	"time"
-
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"strings"
 
 	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
 	"my.domain/githubissue/internal/gitclient"
@@ -108,7 +106,7 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{RequeueAfter: time.Minute}, nil
+	return ctrl.Result{}, nil
 }
 
 // HandleIssues creates an issue with the needed data if it dosent exist, if it does, it updated the existing issue.

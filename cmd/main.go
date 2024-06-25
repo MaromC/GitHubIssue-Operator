@@ -23,6 +23,7 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"time"
 
 	"golang.org/x/oauth2"
 	githubhttp "my.domain/githubissue/internal/http"
@@ -100,6 +101,8 @@ func main() {
 		TLSOpts: tlsOpts,
 	})
 
+	syncPeriod := time.Minute
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -111,6 +114,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "2203433a.dana.io",
+		SyncPeriod:             &syncPeriod,
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
