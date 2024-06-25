@@ -23,7 +23,11 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"golang.org/x/oauth2"
 	githubhttp "my.domain/githubissue/internal/http"
@@ -47,8 +51,11 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme     = runtime.NewScheme()
+	setupLog   = ctrl.Log.WithName("setup")
+	secretName = "github-token"
+	secretKey  = "token"
+	namespace  = "github-operator-system"
 )
 
 func init() {
@@ -64,6 +71,7 @@ func main() {
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
+	var syncPeriod time.Duration
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -73,6 +81,7 @@ func main() {
 		"If set the metrics endpoint is served securely")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.DurationVar(&syncPeriod, "sync-period", time.Minute, "The sync period for the controller manager.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -101,8 +110,6 @@ func main() {
 		TLSOpts: tlsOpts,
 	})
 
-	syncPeriod := time.Minute
-
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -114,7 +121,9 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "2203433a.dana.io",
-		SyncPeriod:             &syncPeriod,
+		Cache: cache.Options{
+			SyncPeriod: &syncPeriod,
+		},
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -135,9 +144,8 @@ func main() {
 	if err = (&controller.GitHubIssueReconciler{
 		Client:    mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),
-		GetClient: GetClientFunc,
-		GitClient: &githubhttp.GitHubClient{GetClient: GetClientFunc},
-	}).SetupWithManager(mgr); err != nil {
+		GitClient: &githubhttp.GitHubClient{K8sClient: mgr.GetClient(), GetClient: GetClientFunc},
+	}).SetupWithManager(mgr, syncPeriod); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GitHubIssue")
 		os.Exit(1)
 	}
@@ -160,14 +168,21 @@ func main() {
 }
 
 // GetClientFunc gets the authorized client
-func GetClientFunc(ctx context.Context) (*http.Client, error) {
-	token := os.Getenv("GITHUB_TOKEN")
-	if token == "" {
-		return nil, errors.New("GitHub token is not set")
+func GetClientFunc(ctx context.Context, k8sClient client.Client) (*http.Client, error) {
+	secret := &corev1.Secret{}
+	err := k8sClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretName}, secret)
+	if err != nil {
+		return nil, errors.New("unable to read GitHub token secret: " + err.Error())
+	}
+
+	token, ok := secret.Data[secretKey]
+	if !ok {
+		return nil, errors.New("GitHub token not found in secret")
 	}
 
 	sourceToken := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
+		&oauth2.Token{AccessToken: string(token)},
 	)
-	return oauth2.NewClient(ctx, sourceToken), nil
+	gitClient := oauth2.NewClient(ctx, sourceToken)
+	return gitClient, nil
 }

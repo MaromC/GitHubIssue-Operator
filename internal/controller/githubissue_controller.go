@@ -19,17 +19,20 @@ package controller
 import (
 	"context"
 	"errors"
+	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"strings"
+	"time"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
 	"my.domain/githubissue/internal/gitclient"
-	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strings"
 )
 
 const (
@@ -47,12 +50,10 @@ const (
 // GitHubIssueReconciler reconciles a GitHubIssue object
 type GitHubIssueReconciler struct {
 	client.Client
-	Scheme     *runtime.Scheme
-	Logger     logr.Logger
-	GetClient  func(ctx context.Context) (*http.Client, error)
-	GitClient  gitclient.GitClient
-	SecretName string
-	SecretKey  string
+	Scheme    *runtime.Scheme
+	Logger    logr.Logger
+	GitClient gitclient.GitClient
+	GetClient func(ctx context.Context, k8sClient client.Client) (*http.Client, error)
 }
 
 //+kubebuilder:rbac:groups=marom.dana.io.dana.io,resources=githubissues,verbs=get;list;watch;create;update;patch;delete
@@ -193,8 +194,9 @@ func GetOwnerAndRepo(githubIssue maromdanaiov1alpha1.GitHubIssue) (string, strin
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *GitHubIssueReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *GitHubIssueReconciler) SetupWithManager(mgr ctrl.Manager, syncPeriod time.Duration) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&maromdanaiov1alpha1.GitHubIssue{}).
+		WithOptions(controller.Options{Reconciler: r, MaxConcurrentReconciles: 1, SyncPeriod: &resyncPeriod}).
 		Complete(r)
 }

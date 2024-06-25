@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/go-logr/logr"
 	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
 )
@@ -24,14 +26,15 @@ var (
 )
 
 type GitHubClient struct {
-	GetClient func(ctx context.Context) (*http.Client, error)
+	K8sClient client.Client
+	GetClient func(ctx context.Context, k8sClient client.Client) (*http.Client, error)
 }
 
 // GetRepositoryIssues gets all the issues listed in the given repository.
 func (r *GitHubClient) GetRepositoryIssues(ctx context.Context, owner string, repo string, logger logr.Logger) ([]maromdanaiov1alpha1.IssueResponse, error) {
 	url := createUrl(owner, repo)
 
-	githubClient, err := r.GetClient(ctx)
+	githubClient, err := r.GetClient(ctx, r.K8sClient)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +85,7 @@ func (r *GitHubClient) CreateIssue(ctx context.Context, owner string, repo strin
 
 // SendRequest sends a request to github.
 func (r *GitHubClient) SendRequest(ctx context.Context, url string, method string, body interface{}, logger logr.Logger) (*maromdanaiov1alpha1.IssueResponse, error) {
-	githubClient, err := r.GetClient(ctx)
+	githubClient, err := r.GetClient(ctx, r.K8sClient)
 	if err != nil {
 		return nil, err
 	}
