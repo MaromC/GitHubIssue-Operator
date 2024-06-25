@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
@@ -33,12 +34,15 @@ import (
 )
 
 const (
-	finalizer      = "githubIssue.finalizers.my.domain"
-	issueHasPr     = "IssueHasPR"
-	hasPrLink      = "IssueHasAPRLink"
-	hasPrMessage   = "Issue has a PR"
-	hasNoPr        = "IssueHasNoPR"
-	hasNoPrMessage = "Issue does not have a PR"
+	finalizer        = "githubIssue.finalizers.my.domain"
+	issueHasPr       = "IssueHasPR"
+	hasPrLink        = "IssueHasAPRLink"
+	hasPrMessage     = "Issue has a PR"
+	hasNoPr          = "IssueHasNoPR"
+	hasNoPrMessage   = "Issue does not have a PR"
+	openIssue        = "OpenIssue"
+	issueExists      = "IssueExists"
+	openIssueMessage = "Issue is open"
 )
 
 // GitHubIssueReconciler reconciles a GitHubIssue object
@@ -93,9 +97,8 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	conditions := CreateConditions(handledIssue)
+	r.updateConditions(githubIssue, handledIssue)
 
-	githubIssue.Status.Conditions = conditions
 	if err = r.Status().Update(ctx, githubIssue); err != nil {
 		r.Logger.Error(err, "Failed to update GitHubIssue status")
 		return ctrl.Result{}, err
@@ -125,35 +128,32 @@ func (r *GitHubIssueReconciler) HandleIssues(foundIssue *maromdanaiov1alpha1.Iss
 	return nil, nil
 }
 
-// CreateConditions create the conditions for the issue.
-func CreateConditions(issue *maromdanaiov1alpha1.IssueResponse) []metav1.Condition {
-	conditions := []metav1.Condition{
-		{
-			Type:               "OpenIssue",
-			Status:             metav1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-			Reason:             "IssueExists",
-			Message:            "Issue is open",
-		},
+// updateConditions updates the conditions for the GitHubIssue.
+func (r *GitHubIssueReconciler) updateConditions(githubIssue *maromdanaiov1alpha1.GitHubIssue, issue *maromdanaiov1alpha1.IssueResponse) {
+	openCondition := metav1.Condition{
+		Type:               openIssue,
+		Status:             metav1.ConditionTrue,
+		LastTransitionTime: metav1.Now(),
+		Reason:             issueExists,
+		Message:            openIssueMessage,
 	}
-	if issue.PullRequestLinks != nil {
-		conditions = append(conditions, metav1.Condition{
-			Type:               issueHasPr,
-			Status:             metav1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-			Reason:             hasPrLink,
-			Message:            hasPrMessage,
-		})
-		return conditions
-	}
-	conditions = append(conditions, metav1.Condition{
+
+	prCondition := metav1.Condition{
 		Type:               issueHasPr,
 		Status:             metav1.ConditionFalse,
 		LastTransitionTime: metav1.Now(),
 		Reason:             hasNoPr,
 		Message:            hasNoPrMessage,
-	})
-	return conditions
+	}
+
+	if issue != nil && issue.PullRequestLinks != nil {
+		prCondition.Status = metav1.ConditionTrue
+		prCondition.Reason = hasPrLink
+		prCondition.Message = hasPrMessage
+	}
+
+	meta.SetStatusCondition(&githubIssue.Status.Conditions, openCondition)
+	meta.SetStatusCondition(&githubIssue.Status.Conditions, prCondition)
 }
 
 // CheckDeletion checks if the GitHubIssue CRD has been deleted and if deleted handles it.
