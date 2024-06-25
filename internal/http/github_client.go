@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
@@ -26,14 +26,15 @@ var (
 )
 
 type GitHubClient struct {
-	GetClient func(ctx context.Context, client client.Client, namespace string) (*http.Client, error)
+	K8sClient client.Client
+	GetClient func(ctx context.Context, k8sClient client.Client) (*http.Client, error)
 }
 
 // GetRepositoryIssues gets all the issues listed in the given repository.
-func (r *GitHubClient) GetRepositoryIssues(ctx context.Context, owner string, repo string, logger logr.Logger, client client.Client, req ctrl.Request) ([]maromdanaiov1alpha1.IssueResponse, error) {
+func (r *GitHubClient) GetRepositoryIssues(ctx context.Context, owner string, repo string, logger logr.Logger) ([]maromdanaiov1alpha1.IssueResponse, error) {
 	url := createUrl(owner, repo)
 
-	githubClient, err := r.GetClient(ctx, client, req.Namespace)
+	githubClient, err := r.GetClient(ctx, r.K8sClient)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +71,7 @@ func (r *GitHubClient) GetRepositoryIssues(ctx context.Context, owner string, re
 }
 
 // CreateIssue creates an issue.
-func (r *GitHubClient) CreateIssue(ctx context.Context, owner string, repo string, title string, body string, logger logr.Logger, client client.Client, request ctrl.Request) (*maromdanaiov1alpha1.IssueResponse, error) {
+func (r *GitHubClient) CreateIssue(ctx context.Context, owner string, repo string, title string, body string, logger logr.Logger) (*maromdanaiov1alpha1.IssueResponse, error) {
 	url := createUrl(owner, repo)
 
 	issue := maromdanaiov1alpha1.IssueRequest{
@@ -79,12 +80,12 @@ func (r *GitHubClient) CreateIssue(ctx context.Context, owner string, repo strin
 		State: "open",
 	}
 
-	return r.SendRequest(ctx, url, http.MethodPost, issue, logger, client, request)
+	return r.SendRequest(ctx, url, http.MethodPost, issue, logger)
 }
 
 // SendRequest sends a request to github.
-func (r *GitHubClient) SendRequest(ctx context.Context, url string, method string, body interface{}, logger logr.Logger, client client.Client, request ctrl.Request) (*maromdanaiov1alpha1.IssueResponse, error) {
-	githubClient, err := r.GetClient(ctx, client, request.Namespace)
+func (r *GitHubClient) SendRequest(ctx context.Context, url string, method string, body interface{}, logger logr.Logger) (*maromdanaiov1alpha1.IssueResponse, error) {
+	githubClient, err := r.GetClient(ctx, r.K8sClient)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +123,7 @@ func (r *GitHubClient) SendRequest(ctx context.Context, url string, method strin
 }
 
 // UpdateIssue updates the issue description.
-func (r *GitHubClient) UpdateIssue(ctx context.Context, owner string, repo string, number int, body string, title string, logger logr.Logger, client client.Client, request ctrl.Request) (*maromdanaiov1alpha1.IssueResponse, error) {
+func (r *GitHubClient) UpdateIssue(ctx context.Context, owner string, repo string, number int, body string, title string, logger logr.Logger) (*maromdanaiov1alpha1.IssueResponse, error) {
 	url := createUrlWithIssueNumber(owner, repo, number)
 
 	issue := &maromdanaiov1alpha1.IssueRequest{
@@ -131,12 +132,12 @@ func (r *GitHubClient) UpdateIssue(ctx context.Context, owner string, repo strin
 		State: open,
 	}
 
-	return r.SendRequest(ctx, url, http.MethodPost, issue, logger, client, request)
+	return r.SendRequest(ctx, url, http.MethodPost, issue, logger)
 }
 
 // CloseIssue changes the issue status to "closed".
-func (r *GitHubClient) CloseIssue(ctx context.Context, owner string, repo string, githubIssue *maromdanaiov1alpha1.GitHubIssue, logger logr.Logger, client client.Client, request ctrl.Request) error {
-	issues, err := r.GetRepositoryIssues(ctx, owner, repo, logger, client, request)
+func (r *GitHubClient) CloseIssue(ctx context.Context, owner string, repo string, githubIssue *maromdanaiov1alpha1.GitHubIssue, logger logr.Logger) error {
+	issues, err := r.GetRepositoryIssues(ctx, owner, repo, logger)
 	if err != nil {
 		return err
 	}
@@ -154,7 +155,7 @@ func (r *GitHubClient) CloseIssue(ctx context.Context, owner string, repo string
 		Body:  githubIssue.Spec.Description,
 	}
 
-	_, err = r.SendRequest(ctx, url, http.MethodPost, issue, logger, client, request)
+	_, err = r.SendRequest(ctx, url, http.MethodPost, issue, logger)
 	if err != nil {
 		logger.Error(err, "Failed to send request")
 		return err

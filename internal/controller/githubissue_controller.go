@@ -19,6 +19,11 @@ package controller
 import (
 	"context"
 	"errors"
+	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"strings"
+	"time"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +33,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strings"
 )
 
 const (
@@ -49,6 +53,7 @@ type GitHubIssueReconciler struct {
 	Scheme    *runtime.Scheme
 	Logger    logr.Logger
 	GitClient gitclient.GitClient
+	GetClient func(ctx context.Context, k8sClient client.Client) (*http.Client, error)
 }
 
 //+kubebuilder:rbac:groups=marom.dana.io.dana.io,resources=githubissues,verbs=get;list;watch;create;update;patch;delete
@@ -70,9 +75,10 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		logger.Error(err, "GitHubIssue resource Not found")
 		return ctrl.Result{}, nil
 	}
+
 	owner, repo := GetOwnerAndRepo(*githubIssue)
 
-	if err := r.CheckDeletion(ctx, githubIssue, owner, repo, r.GitClient, req); err != nil {
+	if err := r.CheckDeletion(ctx, githubIssue, owner, repo, r.GitClient); err != nil {
 		if errors.Is(errors.Unwrap(err), errors.New("NamespaceLabel CR deletion has been handled")) ||
 			errors.Is(errors.Unwrap(err), errors.New("GitHubIssue CR may have been deleted")) {
 			return ctrl.Result{}, nil
@@ -80,7 +86,7 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	issues, err := r.GitClient.GetRepositoryIssues(ctx, owner, repo, r.Logger, r, req)
+	issues, err := r.GitClient.GetRepositoryIssues(ctx, owner, repo, r.Logger)
 	if err != nil {
 		r.Logger.Error(err, "Failed to list all repository issues")
 		return ctrl.Result{}, err
@@ -88,7 +94,7 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	foundIssue := r.GitClient.FindIssue(issues, githubIssue.Spec.Title)
 
-	handledIssue, err := r.HandleIssues(foundIssue, ctx, owner, repo, githubIssue, r.GitClient, req)
+	handledIssue, err := r.HandleIssues(foundIssue, ctx, owner, repo, githubIssue, r.GitClient)
 	if err != nil {
 		r.Logger.Error(err, "Failed to create/update issue")
 		return ctrl.Result{}, err
@@ -105,9 +111,9 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 }
 
 // HandleIssues creates an issue with the needed data if it dosent exist, if it does, it updated the existing issue.
-func (r *GitHubIssueReconciler) HandleIssues(foundIssue *maromdanaiov1alpha1.IssueResponse, ctx context.Context, owner string, repo string, githubIssue *maromdanaiov1alpha1.GitHubIssue, gitClient gitclient.GitClient, req ctrl.Request) (*maromdanaiov1alpha1.IssueResponse, error) {
+func (r *GitHubIssueReconciler) HandleIssues(foundIssue *maromdanaiov1alpha1.IssueResponse, ctx context.Context, owner string, repo string, githubIssue *maromdanaiov1alpha1.GitHubIssue, gitClient gitclient.GitClient) (*maromdanaiov1alpha1.IssueResponse, error) {
 	if foundIssue == nil {
-		newIssue, err := gitClient.CreateIssue(ctx, owner, repo, githubIssue.Spec.Title, githubIssue.Spec.Description, r.Logger, r, req)
+		newIssue, err := gitClient.CreateIssue(ctx, owner, repo, githubIssue.Spec.Title, githubIssue.Spec.Description, r.Logger)
 		if err != nil {
 			r.Logger.Error(err, "Failed to create issue")
 			return nil, err
@@ -115,7 +121,7 @@ func (r *GitHubIssueReconciler) HandleIssues(foundIssue *maromdanaiov1alpha1.Iss
 		return newIssue, nil
 	}
 	if foundIssue.Body != githubIssue.Spec.Description {
-		updatedIssue, err := gitClient.UpdateIssue(ctx, owner, repo, foundIssue.Number, githubIssue.Spec.Description, githubIssue.Spec.Title, r.Logger, r, req)
+		updatedIssue, err := gitClient.UpdateIssue(ctx, owner, repo, foundIssue.Number, githubIssue.Spec.Description, githubIssue.Spec.Title, r.Logger)
 		if err != nil {
 			r.Logger.Error(err, "Failed to update issue")
 			return nil, err
@@ -154,10 +160,10 @@ func (r *GitHubIssueReconciler) updateConditions(githubIssue *maromdanaiov1alpha
 }
 
 // CheckDeletion checks if the GitHubIssue CRD has been deleted and if deleted handles it.
-func (r *GitHubIssueReconciler) CheckDeletion(ctx context.Context, githubIssue *maromdanaiov1alpha1.GitHubIssue, owner string, repo string, gitClient gitclient.GitClient, req ctrl.Request) error {
+func (r *GitHubIssueReconciler) CheckDeletion(ctx context.Context, githubIssue *maromdanaiov1alpha1.GitHubIssue, owner string, repo string, gitClient gitclient.GitClient) error {
 	if !githubIssue.ObjectMeta.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(githubIssue, finalizer) {
-			if err := gitClient.CloseIssue(ctx, owner, repo, githubIssue, r.Logger, r, req); err != nil {
+			if err := gitClient.CloseIssue(ctx, owner, repo, githubIssue, r.Logger); err != nil {
 				return err
 			}
 			controllerutil.RemoveFinalizer(githubIssue, finalizer)
@@ -188,8 +194,9 @@ func GetOwnerAndRepo(githubIssue maromdanaiov1alpha1.GitHubIssue) (string, strin
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *GitHubIssueReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *GitHubIssueReconciler) SetupWithManager(mgr ctrl.Manager, syncPeriod time.Duration) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&maromdanaiov1alpha1.GitHubIssue{}).
+		WithOptions(controller.Options{Reconciler: r, MaxConcurrentReconciles: 1, SyncPeriod: &resyncPeriod}).
 		Complete(r)
 }
