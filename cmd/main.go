@@ -22,6 +22,7 @@ import (
 	"errors"
 	"flag"
 	"golang.org/x/oauth2"
+	githubhttp "my.domain/githubissue/internal/http"
 	"net/http"
 	"os"
 
@@ -130,6 +131,7 @@ func main() {
 		Client:    mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),
 		GetClient: GetClientFunc,
+		GitClient: &githubhttp.GitHubClient{GetClient: GetClientFunc},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GitHubIssue")
 		os.Exit(1)
