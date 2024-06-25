@@ -19,10 +19,13 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"flag"
+	"fmt"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -47,8 +50,10 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme     = runtime.NewScheme()
+	setupLog   = ctrl.Log.WithName("setup")
+	secretName = "github-token"
+	secretKey  = "token"
 )
 
 func init() {
@@ -160,14 +165,22 @@ func main() {
 }
 
 // GetClientFunc gets the authorized client
-func GetClientFunc(ctx context.Context) (*http.Client, error) {
-	token := os.Getenv("GITHUB_TOKEN")
-	if token == "" {
-		return nil, errors.New("GitHub token is not set")
+func GetClientFunc(ctx context.Context, client client.Client, namespace string) (*http.Client, error) {
+	secret := &corev1.Secret{}
+	err := client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, secret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get secret %s: %w", secretName, err)
 	}
 
-	sourceToken := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
-	)
-	return oauth2.NewClient(ctx, sourceToken), nil
+	token, ok := secret.Data[secretKey]
+	if !ok {
+		return nil, fmt.Errorf("token not found in secret %s/%s", secretName, secretKey)
+	}
+
+	httpClient := &http.Client{
+		Transport: &oauth2.Transport{
+			Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: string(token)}),
+		},
+	}
+	return httpClient, nil
 }
