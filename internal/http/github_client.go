@@ -18,7 +18,7 @@ type GitHubClient struct {
 	GetClient func(ctx context.Context) (*http.Client, error)
 }
 
-// GetRepositoryIssues gets all the issues listed in the given repository
+// GetRepositoryIssues gets all the issues listed in the given repository.
 func (r *GitHubClient) GetRepositoryIssues(ctx context.Context, owner string, repo string, logger logr.Logger) ([]maromdanaiov1alpha1.IssueResponse, error) {
 	url := CreateUrl(owner, repo)
 
@@ -53,7 +53,7 @@ func (r *GitHubClient) GetRepositoryIssues(ctx context.Context, owner string, re
 	return issues, nil
 }
 
-// CreateIssue creates an issue
+// CreateIssue creates an issue.
 func (r *GitHubClient) CreateIssue(ctx context.Context, owner string, repo string, title string, body string) (*maromdanaiov1alpha1.IssueResponse, error) {
 	url := CreateUrl(owner, repo)
 
@@ -66,7 +66,7 @@ func (r *GitHubClient) CreateIssue(ctx context.Context, owner string, repo strin
 	return r.SendRequest(ctx, url, http.MethodPost, issue)
 }
 
-// SendRequest sends a request to github
+// SendRequest sends a request to github.
 func (r *GitHubClient) SendRequest(ctx context.Context, url string, method string, body interface{}) (*maromdanaiov1alpha1.IssueResponse, error) {
 	githubClient, err := r.GetClient(ctx)
 	if err != nil {
@@ -100,7 +100,7 @@ func (r *GitHubClient) SendRequest(ctx context.Context, url string, method strin
 	return &result, nil
 }
 
-// UpdateIssue updates the issue description
+// UpdateIssue updates the issue description.
 func (r *GitHubClient) UpdateIssue(ctx context.Context, owner string, repo string, number int, body string, title string) (*maromdanaiov1alpha1.IssueResponse, error) {
 	url := CreateUrlWithIssueNumber(owner, repo, number)
 
@@ -113,7 +113,7 @@ func (r *GitHubClient) UpdateIssue(ctx context.Context, owner string, repo strin
 	return r.SendRequest(ctx, url, http.MethodPost, issue)
 }
 
-// CloseIssue changes the issue status to "closed"
+// CloseIssue changes the issue status to "closed".
 func (r *GitHubClient) CloseIssue(ctx context.Context, owner string, repo string, githubIssue *maromdanaiov1alpha1.GitHubIssue, logger logr.Logger) error {
 	issues, err := r.GetRepositoryIssues(ctx, owner, repo, logger)
 	if err != nil {
@@ -141,17 +141,17 @@ func (r *GitHubClient) CloseIssue(ctx context.Context, owner string, repo string
 	return nil
 }
 
-// CreateUrl returns the gitHub url we need to send / get the request to / from
+// CreateUrl returns the gitHub url we need to send / get the request to / from.
 func CreateUrl(owner string, repo string) string {
 	return fmt.Sprintf("%s/repos/%s/%s/issues/", APIBaseURL, owner, repo)
 }
 
-// CreateUrlWithIssueNumber returns the gitHub url we need to send / get the request to / from with a specific issue number
+// CreateUrlWithIssueNumber returns the gitHub url we need to send / get the request to / from with a specific issue number.
 func CreateUrlWithIssueNumber(owner string, repo string, number int) string {
 	return fmt.Sprintf("%s/repos/%s/%s/issues/%d", APIBaseURL, owner, repo, number)
 }
 
-// FindIssue finds the issue in the lissues list with the same title as the one in thr githubIssue
+// FindIssue finds the issue in the lissues list with the same title as the one in thr githubIssue.
 func (r *GitHubClient) FindIssue(issues []maromdanaiov1alpha1.IssueResponse, title string) *maromdanaiov1alpha1.IssueResponse {
 	for _, issue := range issues {
 		if issue.Title == title {

@@ -100,7 +100,7 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return ctrl.Result{RequeueAfter: time.Minute}, nil
 }
 
-// HandleIssues creates an issue with the needed data if it dosent exist, if it does, it updated the existing issue
+// HandleIssues creates an issue with the needed data if it dosent exist, if it does, it updated the existing issue.
 func (r *GitHubIssueReconciler) HandleIssues(foundIssue *maromdanaiov1alpha1.IssueResponse, ctx context.Context, owner string, repo string, githubIssue *maromdanaiov1alpha1.GitHubIssue, gitClient githubhttp.GitHubClient) (*maromdanaiov1alpha1.IssueResponse, error) {
 	if foundIssue == nil {
 		newIssue, err := gitClient.CreateIssue(ctx, owner, repo, githubIssue.Spec.Title, githubIssue.Spec.Description)
@@ -121,7 +121,7 @@ func (r *GitHubIssueReconciler) HandleIssues(foundIssue *maromdanaiov1alpha1.Iss
 	return nil, nil
 }
 
-// CreateConditions create the conditions for the issue
+// CreateConditions create the conditions for the issue.
 func CreateConditions(issue *maromdanaiov1alpha1.IssueResponse) []metav1.Condition {
 	conditions := []metav1.Condition{
 		{
@@ -152,7 +152,7 @@ func CreateConditions(issue *maromdanaiov1alpha1.IssueResponse) []metav1.Conditi
 	return conditions
 }
 
-// CheckDeletion checks if the GitHubIssue CRD has been deleted and if deleted handles it
+// CheckDeletion checks if the GitHubIssue CRD has been deleted and if deleted handles it.
 func (r *GitHubIssueReconciler) CheckDeletion(ctx context.Context, githubIssue *maromdanaiov1alpha1.GitHubIssue, owner string, repo string, gitClient githubhttp.GitHubClient) error {
 	if !githubIssue.ObjectMeta.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(githubIssue, finalizer) {
@@ -178,7 +178,7 @@ func (r *GitHubIssueReconciler) CheckDeletion(ctx context.Context, githubIssue *
 	return nil
 }
 
-// GetOwnerAndRepo returns the owner and repo parts from the githubIssue repo string
+// GetOwnerAndRepo returns the owner and repo parts from the githubIssue repo string.
 func GetOwnerAndRepo(githubIssue maromdanaiov1alpha1.GitHubIssue) (string, string) {
 	repoParts := strings.Split(githubIssue.Spec.Repo, "/")
 	owner := repoParts[len(repoParts)-2]
