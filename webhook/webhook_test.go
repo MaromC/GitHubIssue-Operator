@@ -49,7 +49,7 @@ var _ = Describe("Namespace Webhook", func() {
 
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-namespace",
+			Name: "test-Namespace",
 		},
 	}
 
@@ -70,7 +70,7 @@ var _ = Describe("Namespace Webhook", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("should log the username to the file when creating a namespace", func() {
+	It("should log the username to the file when creating a Namespace", func() {
 
 		request := CreateAdmissionRequest("create-user", admissionv1.Create)
 
@@ -79,7 +79,7 @@ var _ = Describe("Namespace Webhook", func() {
 		CheckUserInFile("create-user")
 	})
 
-	It("should log the username to the file when deleting a namespace", func() {
+	It("should log the username to the file when deleting a Namespace", func() {
 
 		request := CreateAdmissionRequest("delete-user", admissionv1.Delete)
 
@@ -89,7 +89,7 @@ var _ = Describe("Namespace Webhook", func() {
 
 	})
 
-	It("should log the username to the file when updating a namespace", func() {
+	It("should log the username to the file when updating a Namespace", func() {
 
 		request := CreateAdmissionRequest("update-user", admissionv1.Update)
 

@@ -56,7 +56,7 @@ type GitHubIssueReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := r.Logger.WithValues("namespace", req.Namespace, "name", req.Name)
+	logger := r.Logger.WithValues("Namespace", req.Namespace, "name", req.Name)
 	githubIssue := &maromdanaiov1alpha1.GitHubIssue{}
 	if err := r.Get(ctx, req.NamespacedName, githubIssue); err != nil {
 		if client.IgnoreNotFound(err) != nil {

@@ -10,7 +10,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-marom-dana-io-dana-io-v1alpha1-namespace
+      path: /mutate-marom-dana-io-dana-io-v1alpha1-Namespace
   failurePolicy: Fail
   name: mnamespace.kb.io
   rules:
@@ -22,7 +22,7 @@ webhooks:
     - CREATE
     - UPDATE
     resources:
-    - namespace
+    - Namespace
   sideEffects: None
 ---
 apiVersion: admissionregistration.k8s.io/v1
@@ -36,7 +36,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: default
-      path: /validate-marom-dana-io-dana-io-v1alpha1-namespace
+      path: /validate-marom-dana-io-dana-io-v1alpha1-Namespace
     caBundle: "MIIDETCCAfmgAwIBAgIRAPDk4NdFg/4ZkKMRPEIw2GgwDQYJKoZIhvcNAQELBQAwADAeFw0yNDA2MDkwODQ0NTRaFw0yNDA5MDcwODQ0NTRaMAAwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDRJ+N25VBuJ20DcVyA5AAkeTo3Nrm+CJcxo/aXG9oaPt4zEry9G+Xqbxsf2N3wMUuFB8QpZV7MZ35slFAtEeA5ONxObKVRus2KS4YECGZe9CHtFY/d2boiPVVWXfECW2oEaBnq0CuFrVN+qh22/vSajfxOtcwFPVkfeygGZiQpRQ0x9YHEFFAKRMrCVyAl9VAZDwPgcZcXfzofA06RgcKbO5kYL01bzSjuxi9SMD0kwsKozJdw3nqWK0YjNrp7LKX5qG018qW6YbazmOXZfagS5Y0pu/ZS8BtbujRP0X4TqvkqyLTmBugjnXJ1sY0HuuL96Dir1v7CSymPcn8V+wudAgMBAAGjgYUwgYIwDgYDVR0PAQH/BAQDAgWgMAwGA1UdEwEB/wQCMAAwYgYDVR0RAQH/BFgwVoIiU0VSVklDRV9OQU1FLlNFUlZJQ0VfTkFNRVNQQUNFLnN2Y4IwU0VSVklDRV9OQU1FLlNUlZJQ0VfTkFNRVNQQUNFLnN2Yy5jbHVzdGVyLmxvY2FsMA0GCSqGSIb3DQEBCwUAA4IBAQBIW3KC0k020Vs1iwai5k3vymrnPob1p8XpgZTvOMF3W4RGLe8l6+RNZ8XfEqOyKV5ADVzfWjwdKsu7Uc9lQBoI8JEtU4rJTa66kd4WEu2mr66szrm2LYxSnMwDEl2uM8AFIiBEpzfybro9P+85pASBDQlmhhfBVnys80+USzSmRrA5tADOf6MIfWA66gcZ91b9DWQrvVjHb77e6MlAPwk5EfDDQQdkIlC9mGDwPas8BsGSDzUa5L5w9nKLjdDiFVgHVzpg2M9R5Jq/K+DlzMXV2BtxUlg8Sisp3QBqnYJv91YU6kZ8AgzvhrePVnq/T1w1nhYOIEOYS54mCsIdcCZj"
   failurePolicy: Fail
   name: vnamespace.kb.io
@@ -49,6 +49,6 @@ webhooks:
     - CREATE
     - UPDATE
     resources:
-    - namespace
+    - Namespace
     -
   sideEffects: None

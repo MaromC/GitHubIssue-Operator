@@ -37,7 +37,7 @@ var _ = Describe("controller", Ordered, func() {
 		By("installing the cert-manager")
 		Expect(utils.InstallCertManager()).To(Succeed())
 
-		By("creating manager namespace")
+		By("creating manager Namespace")
 		cmd := exec.Command("kubectl", "create", "ns", namespace)
 		_, _ = utils.Run(cmd)
 	})
@@ -49,7 +49,7 @@ var _ = Describe("controller", Ordered, func() {
 		By("uninstalling the cert-manager bundle")
 		utils.UninstallCertManager()
 
-		By("removing manager namespace")
+		By("removing manager Namespace")
 		cmd := exec.Command("kubectl", "delete", "ns", namespace)
 		_, _ = utils.Run(cmd)
 	})

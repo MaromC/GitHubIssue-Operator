@@ -1,10 +1,10 @@
-# Adds namespace to all resources.
+# Adds Namespace to all resources.
 namespace: github-operator-system
 
 # Value of this field is prepended to the
 # names of all resources, e.g. a deployment named
 # "wordpress" becomes "alices-wordpress".
-# Note that it should also match with the prefix (text before '-') of the namespace
+# Note that it should also match with the prefix (text before '-') of the Namespace
 # field above.
 namePrefix: github-operator-
 
@@ -49,7 +49,7 @@ patches:
 #      group: cert-manager.io
 #      version: v1
 #      name: serving-cert # this name should match the one in certificate.yaml
-#      fieldPath: .metadata.namespace # namespace of the certificate CR
+#      fieldPath: .metadata.Namespace # Namespace of the certificate CR
 #    targets:
 #      - select:
 #          kind: ValidatingWebhookConfiguration
@@ -110,7 +110,7 @@ patches:
 #      kind: Service
 #      version: v1
 #      name: webhook-service
-#      fieldPath: .metadata.name # namespace of the service
+#      fieldPath: .metadata.name # Namespace of the service
 #    targets:
 #      - select:
 #          kind: Certificate
@@ -127,7 +127,7 @@ patches:
 #      kind: Service
 #      version: v1
 #      name: webhook-service
-#      fieldPath: .metadata.namespace # namespace of the service
+#      fieldPath: .metadata.Namespace # Namespace of the service
 #    targets:
 #      - select:
 #          kind: Certificate

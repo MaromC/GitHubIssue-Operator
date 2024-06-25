@@ -95,7 +95,7 @@ func InstallCertManager() error {
 	// was re-installed after uninstalling on a cluster.
 	cmd = exec.Command("kubectl", "wait", "deployment.apps/cert-manager-webhook",
 		"--for", "condition=Available",
-		"--namespace", "cert-manager",
+		"--Namespace", "cert-manager",
 		"--timeout", "5m",
 	)
 
