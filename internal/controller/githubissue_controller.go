@@ -23,14 +23,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
+	"my.domain/githubissue/internal/gitclient"
 	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
-
-	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
-	"my.domain/githubissue/internal/gitclient"
 )
 
 const (
@@ -79,7 +78,8 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	owner, repo := GetOwnerAndRepo(*githubIssue)
 
 	if err := r.CheckDeletion(ctx, githubIssue, owner, repo, r.GitClient); err != nil {
-		if errors.Is(errors.Unwrap(err), errors.New("NamespaceLabel CR deletion has been handled")) {
+		if errors.Is(errors.Unwrap(err), errors.New("NamespaceLabel CR deletion has been handled")) ||
+			errors.Is(errors.Unwrap(err), errors.New("GitHubIssue CR may have been deleted")) {
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
