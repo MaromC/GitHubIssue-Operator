@@ -19,18 +19,20 @@ package controller
 import (
 	"context"
 	"errors"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
-	"my.domain/githubissue/internal/gitclient"
-	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strings"
-	"time"
+
+	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
+	"my.domain/githubissue/internal/gitclient"
 )
 
 const (
@@ -112,7 +114,7 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 // HandleIssues creates an issue with the needed data if it dosent exist, if it does, it updated the existing issue.
 func (r *GitHubIssueReconciler) HandleIssues(foundIssue *maromdanaiov1alpha1.IssueResponse, ctx context.Context, owner string, repo string, githubIssue *maromdanaiov1alpha1.GitHubIssue, gitClient gitclient.GitClient) (*maromdanaiov1alpha1.IssueResponse, error) {
 	if foundIssue == nil {
-		newIssue, err := gitClient.CreateIssue(ctx, owner, repo, githubIssue.Spec.Title, githubIssue.Spec.Description)
+		newIssue, err := gitClient.CreateIssue(ctx, owner, repo, githubIssue.Spec.Title, githubIssue.Spec.Description, r.Logger)
 		if err != nil {
 			r.Logger.Error(err, "Failed to create issue")
 			return nil, err
@@ -120,7 +122,7 @@ func (r *GitHubIssueReconciler) HandleIssues(foundIssue *maromdanaiov1alpha1.Iss
 		return newIssue, nil
 	}
 	if foundIssue.Body != githubIssue.Spec.Description {
-		updatedIssue, err := gitClient.UpdateIssue(ctx, owner, repo, foundIssue.Number, githubIssue.Spec.Description, githubIssue.Spec.Title)
+		updatedIssue, err := gitClient.UpdateIssue(ctx, owner, repo, foundIssue.Number, githubIssue.Spec.Description, githubIssue.Spec.Title, r.Logger)
 		if err != nil {
 			r.Logger.Error(err, "Failed to update issue")
 			return nil, err
@@ -170,7 +172,7 @@ func (r *GitHubIssueReconciler) CheckDeletion(ctx context.Context, githubIssue *
 			if err := r.Update(ctx, githubIssue); err != nil {
 				return err
 			}
-			return errors.New("GitHubIssue CR deletion has been handeld")
+			return errors.New("GitHubIssue CR deletion has been handled")
 		}
 		return errors.New("GitHubIssue CR may have been deleted")
 	}

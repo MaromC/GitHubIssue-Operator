@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-logr/logr"
-	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
 	"net/http"
 	"strings"
+
+	"github.com/go-logr/logr"
+	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
 )
 
 var (
@@ -45,7 +46,12 @@ func (r *GitHubClient) GetRepositoryIssues(ctx context.Context, owner string, re
 		return nil, err
 	}
 
-	defer response.Body.Close()
+	defer func() {
+		err := response.Body.Close()
+		if err != nil {
+			logger.Error(err, "failed closing response body")
+		}
+	}()
 
 	if response.StatusCode != http.StatusOK {
 		err := fmt.Errorf("failed to list all github issues with status code: %d", response.StatusCode)
@@ -62,7 +68,7 @@ func (r *GitHubClient) GetRepositoryIssues(ctx context.Context, owner string, re
 }
 
 // CreateIssue creates an issue.
-func (r *GitHubClient) CreateIssue(ctx context.Context, owner string, repo string, title string, body string) (*maromdanaiov1alpha1.IssueResponse, error) {
+func (r *GitHubClient) CreateIssue(ctx context.Context, owner string, repo string, title string, body string, logger logr.Logger) (*maromdanaiov1alpha1.IssueResponse, error) {
 	url := createUrl(owner, repo)
 
 	issue := maromdanaiov1alpha1.IssueRequest{
@@ -71,11 +77,11 @@ func (r *GitHubClient) CreateIssue(ctx context.Context, owner string, repo strin
 		State: "open",
 	}
 
-	return r.SendRequest(ctx, url, http.MethodPost, issue)
+	return r.SendRequest(ctx, url, http.MethodPost, issue, logger)
 }
 
 // SendRequest sends a request to github.
-func (r *GitHubClient) SendRequest(ctx context.Context, url string, method string, body interface{}) (*maromdanaiov1alpha1.IssueResponse, error) {
+func (r *GitHubClient) SendRequest(ctx context.Context, url string, method string, body interface{}, logger logr.Logger) (*maromdanaiov1alpha1.IssueResponse, error) {
 	githubClient, err := r.GetClient(ctx)
 	if err != nil {
 		return nil, err
@@ -98,7 +104,12 @@ func (r *GitHubClient) SendRequest(ctx context.Context, url string, method strin
 		return nil, err
 	}
 
-	defer response.Body.Close()
+	defer func() {
+		err := response.Body.Close()
+		if err != nil {
+			logger.Error(err, "failed closing response body")
+		}
+	}()
 
 	var result maromdanaiov1alpha1.IssueResponse
 	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
@@ -109,7 +120,7 @@ func (r *GitHubClient) SendRequest(ctx context.Context, url string, method strin
 }
 
 // UpdateIssue updates the issue description.
-func (r *GitHubClient) UpdateIssue(ctx context.Context, owner string, repo string, number int, body string, title string) (*maromdanaiov1alpha1.IssueResponse, error) {
+func (r *GitHubClient) UpdateIssue(ctx context.Context, owner string, repo string, number int, body string, title string, logger logr.Logger) (*maromdanaiov1alpha1.IssueResponse, error) {
 	url := createUrlWithIssueNumber(owner, repo, number)
 
 	issue := &maromdanaiov1alpha1.IssueRequest{
@@ -118,7 +129,7 @@ func (r *GitHubClient) UpdateIssue(ctx context.Context, owner string, repo strin
 		State: open,
 	}
 
-	return r.SendRequest(ctx, url, http.MethodPost, issue)
+	return r.SendRequest(ctx, url, http.MethodPost, issue, logger)
 }
 
 // CloseIssue changes the issue status to "closed".
@@ -141,7 +152,7 @@ func (r *GitHubClient) CloseIssue(ctx context.Context, owner string, repo string
 		Body:  githubIssue.Spec.Description,
 	}
 
-	_, err = r.SendRequest(ctx, url, http.MethodPost, issue)
+	_, err = r.SendRequest(ctx, url, http.MethodPost, issue, logger)
 	if err != nil {
 		logger.Error(err, "Failed to send request")
 		return err

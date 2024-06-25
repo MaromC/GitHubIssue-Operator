@@ -21,10 +21,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"flag"
-	"golang.org/x/oauth2"
-	githubhttp "my.domain/githubissue/internal/http"
 	"net/http"
 	"os"
+
+	"golang.org/x/oauth2"
+	githubhttp "my.domain/githubissue/internal/http"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
