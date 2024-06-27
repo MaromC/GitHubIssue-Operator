@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"strings"
 	"time"
 
@@ -197,6 +196,5 @@ func GetOwnerAndRepo(githubIssue maromdanaiov1alpha1.GitHubIssue) (string, strin
 func (r *GitHubIssueReconciler) SetupWithManager(mgr ctrl.Manager, syncPeriod time.Duration) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&maromdanaiov1alpha1.GitHubIssue{}).
-		WithOptions(controller.Options{Reconciler: r, MaxConcurrentReconciles: 1, SyncPeriod: &resyncPeriod}).
 		Complete(r)
 }
