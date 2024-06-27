@@ -19,19 +19,17 @@ package controller
 import (
 	"context"
 	"errors"
-	"net/http"
-	"strings"
-	"time"
-
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
 	"my.domain/githubissue/internal/gitclient"
+	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"strings"
 )
 
 const (
@@ -193,7 +191,7 @@ func GetOwnerAndRepo(githubIssue maromdanaiov1alpha1.GitHubIssue) (string, strin
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *GitHubIssueReconciler) SetupWithManager(mgr ctrl.Manager, syncPeriod time.Duration) error {
+func (r *GitHubIssueReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&maromdanaiov1alpha1.GitHubIssue{}).
 		Complete(r)
