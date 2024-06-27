@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	githubhttp "my.domain/githubissue/internal/http"
 	"net/http"
 
 	corev1 "k8s.io/api/core/v1"
@@ -95,18 +96,6 @@ var _ = Describe("GitHubIssue Controller", func() {
 			}
 		}
 
-		reconcileGitHubIssue := func(getClient func(ctx context.Context, k8sClient client.Client) (*http.Client, error)) error {
-			controllerReconciler := &GitHubIssueReconciler{
-				Client:    k8sClient,
-				Scheme:    k8sClient.Scheme(),
-				GetClient: getClient,
-			}
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
-			return err
-		}
-
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind GitHubIssue")
 			err := k8sClient.Get(ctx, typeNamespacedName, githubissue)
@@ -144,7 +133,14 @@ var _ = Describe("GitHubIssue Controller", func() {
 			getClient := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/1", 1)
 
 			By("Reconciling the created resource")
-			err := reconcileGitHubIssue(getClient)
+			controllerReconciler := &GitHubIssueReconciler{
+				Client:    k8sClient,
+				Scheme:    k8sClient.Scheme(),
+				GitClient: &githubhttp.GitHubClient{K8sClient: k8sClient, GetClient: getClient},
+			}
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Verifying the issue was created in GitHub with the right conditions")
@@ -187,7 +183,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 			controllerReconciler := &GitHubIssueReconciler{
 				Client:    k8sClient,
 				Scheme:    k8sClient.Scheme(),
-				GetClient: getClient,
+				GitClient: &githubhttp.GitHubClient{K8sClient: k8sClient, GetClient: getClient},
 			}
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
@@ -215,11 +211,12 @@ var _ = Describe("GitHubIssue Controller", func() {
 			controllerReconciler := &GitHubIssueReconciler{
 				Client:    k8sClient,
 				Scheme:    k8sClient.Scheme(),
-				GetClient: getClient,
+				GitClient: &githubhttp.GitHubClient{K8sClient: k8sClient, GetClient: getClient},
 			}
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
 			})
+			Expect(err).NotTo(HaveOccurred())
 
 			By("Verifying the correct error is returned")
 			Expect(err).To(HaveOccurred())
@@ -237,7 +234,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 			controllerReconciler := &GitHubIssueReconciler{
 				Client:    k8sClient,
 				Scheme:    k8sClient.Scheme(),
-				GetClient: getClient,
+				GitClient: &githubhttp.GitHubClient{K8sClient: k8sClient, GetClient: getClient},
 			}
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
@@ -274,7 +271,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 			controllerReconciler := &GitHubIssueReconciler{
 				Client:    k8sClient,
 				Scheme:    k8sClient.Scheme(),
-				GetClient: getClient,
+				GitClient: &githubhttp.GitHubClient{K8sClient: k8sClient, GetClient: getClient},
 			}
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
@@ -320,7 +317,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 			controllerReconciler := &GitHubIssueReconciler{
 				Client:    k8sClient,
 				Scheme:    k8sClient.Scheme(),
-				GetClient: getClient,
+				GitClient: &githubhttp.GitHubClient{K8sClient: k8sClient, GetClient: getClient},
 			}
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,

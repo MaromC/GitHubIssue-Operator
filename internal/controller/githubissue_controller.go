@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
 	"my.domain/githubissue/internal/gitclient"
-	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -50,7 +49,6 @@ type GitHubIssueReconciler struct {
 	Scheme    *runtime.Scheme
 	Logger    logr.Logger
 	GitClient gitclient.GitClient
-	GetClient func(ctx context.Context, k8sClient client.Client) (*http.Client, error)
 }
 
 //+kubebuilder:rbac:groups=marom.dana.io.dana.io,resources=githubissues,verbs=get;list;watch;create;update;patch;delete

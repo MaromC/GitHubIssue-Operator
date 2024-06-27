@@ -145,7 +145,7 @@ func main() {
 		Client:    mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),
 		GitClient: &githubhttp.GitHubClient{K8sClient: mgr.GetClient(), GetClient: GetClientFunc},
-	}).SetupWithManager(mgr, syncPeriod); err != nil {
+	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GitHubIssue")
 		os.Exit(1)
 	}
