@@ -3,11 +3,14 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"golang.org/x/oauth2"
+	corev1 "k8s.io/api/core/v1"
+	"my.domain/githubissue/internal/gitclient"
 	"net/http"
-	"strings"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 
 	"github.com/go-logr/logr"
 	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
@@ -23,28 +26,55 @@ var (
 	closed           = "closed"
 	url              = "%s/repos/%s/%s/issues/"
 	urlWithNumber    = "%s/repos/%s/%s/issues/%d"
+	secretName       = "github-token"
+	secretKey        = "token"
+	namespace        = "github-operator-system"
 )
 
 type GitHubClient struct {
+	K8sClient *http.Client
+}
+
+type GitHubClientInitializer struct {
 	K8sClient client.Client
-	GetClient func(ctx context.Context, k8sClient client.Client) (*http.Client, error)
+}
+
+// InitializeGit initialized an authorized client
+func (g *GitHubClientInitializer) InitializeGit(ctx context.Context) (gitclient.GitClient, error) {
+	secret := &corev1.Secret{}
+	err := g.K8sClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretName}, secret)
+	if err != nil {
+		return nil, errors.New("unable to read GitHub token secret: " + err.Error())
+	}
+
+	token, ok := secret.Data[secretKey]
+	if !ok {
+		return nil, errors.New("GitHub token not found in secret")
+	}
+
+	sourceToken := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: string(token)},
+	)
+	httpClient := oauth2.NewClient(ctx, sourceToken)
+
+	return &GitHubClient{K8sClient: httpClient}, nil
 }
 
 // GetRepositoryIssues gets all the issues listed in the given repository.
 func (r *GitHubClient) GetRepositoryIssues(ctx context.Context, owner string, repo string, logger logr.Logger) ([]maromdanaiov1alpha1.IssueResponse, error) {
 	url := createUrl(owner, repo)
-
-	githubClient, err := r.GetClient(ctx, r.K8sClient)
-	if err != nil {
-		return nil, err
-	}
+	//
+	//githubClient, err := r.GetClient(ctx, r.K8sClient)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	response, err := githubClient.Do(request)
+	response, err := r.K8sClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -85,10 +115,10 @@ func (r *GitHubClient) CreateIssue(ctx context.Context, owner string, repo strin
 
 // SendRequest sends a request to github.
 func (r *GitHubClient) SendRequest(ctx context.Context, url string, method string, body interface{}, logger logr.Logger) (*maromdanaiov1alpha1.IssueResponse, error) {
-	githubClient, err := r.GetClient(ctx, r.K8sClient)
-	if err != nil {
-		return nil, err
-	}
+	//githubClient, err := r.GetClient(ctx, r.K8sClient)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	requestBody, err := json.Marshal(body)
 	if err != nil {
@@ -102,7 +132,7 @@ func (r *GitHubClient) SendRequest(ctx context.Context, url string, method strin
 	req.Header.Set(accept, acceptValue)
 	req.Header.Set(contentType, contentTypeValue)
 
-	response, err := githubClient.Do(req)
+	response, err := r.K8sClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

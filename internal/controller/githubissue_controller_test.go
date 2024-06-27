@@ -20,10 +20,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	corev1 "k8s.io/api/core/v1"
 	githubhttp "my.domain/githubissue/internal/http"
 	"net/http"
-
-	corev1 "k8s.io/api/core/v1"
 
 	"github.com/migueleliasweb/go-github-mock/src/mock"
 	. "github.com/onsi/ginkgo/v2"
@@ -51,7 +50,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 		}
 		githubissue := &maromdanaiov1alpha1.GitHubIssue{}
 
-		setUpMockedClient := func(issues []maromdanaiov1alpha1.IssueResponse, url string, number int) func(ctx context.Context, k8sClient client.Client) (*http.Client, error) {
+		setUpMockedClient := func(issues []maromdanaiov1alpha1.IssueResponse, url string, number int) (client.Client, error) {
 			mockedHTTPClient := mock.NewMockedHTTPClient(
 				mock.WithRequestMatchHandler(
 					mock.GetReposIssuesByOwnerByRepo,
@@ -76,24 +75,23 @@ var _ = Describe("GitHubIssue Controller", func() {
 				),
 			)
 
-			return func(ctx context.Context, k8sClient client.Client) (*http.Client, error) {
-				secret := &corev1.Secret{}
-				err := k8sClient.Get(ctx, client.ObjectKey{Namespace: "default", Name: secretName}, secret)
-				if err != nil {
-					return nil, errors.New("unable to read GitHub token secret: " + err.Error())
-				}
-
-				token, ok := secret.Data[secretKey]
-				if !ok {
-					return nil, errors.New("GitHub token not found in secret")
-				}
-				sourceToken := oauth2.StaticTokenSource(
-					&oauth2.Token{AccessToken: string(token)},
-				)
-				client := oauth2.NewClient(ctx, sourceToken)
-				client.Transport = mockedHTTPClient.Transport
-				return client, nil
+			secret := &corev1.Secret{}
+			err := k8sClient.Get(ctx, client.ObjectKey{Namespace: "default", Name: secretName}, secret)
+			if err != nil {
+				return nil, errors.New("unable to read GitHub token secret: " + err.Error())
 			}
+
+			token, ok := secret.Data[secretKey]
+			if !ok {
+				return nil, errors.New("GitHub token not found in secret")
+			}
+			sourceToken := oauth2.StaticTokenSource(
+				&oauth2.Token{AccessToken: string(token)},
+			)
+			httpClient := oauth2.NewClient(ctx, sourceToken)
+			httpClient.Transport = mockedHTTPClient.Transport
+			newClient, _ := client.New(cfg, client.Options{HTTPClient: httpClient})
+			return newClient, nil
 		}
 
 		BeforeEach(func() {
@@ -130,15 +128,18 @@ var _ = Describe("GitHubIssue Controller", func() {
 
 			By("Setting up the mocked GitHub client")
 			issues := []maromdanaiov1alpha1.IssueResponse{}
-			getClient := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/1", 1)
+			getClient, err := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/1", 1)
+
+			gitInitializer := &githubhttp.GitHubClientInitializer{K8sClient: getClient}
 
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client:    k8sClient,
-				Scheme:    k8sClient.Scheme(),
-				GitClient: &githubhttp.GitHubClient{K8sClient: k8sClient, GetClient: getClient},
+				Client:         k8sClient,
+				Scheme:         k8sClient.Scheme(),
+				GitInitializer: gitInitializer,
 			}
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -177,15 +178,17 @@ var _ = Describe("GitHubIssue Controller", func() {
 					State:  "open",
 				},
 			}
-			getClient := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/1", 1)
+			getClient, err := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/1", 1)
+
+			gitInitializer := &githubhttp.GitHubClientInitializer{K8sClient: getClient}
 
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client:    k8sClient,
-				Scheme:    k8sClient.Scheme(),
-				GitClient: &githubhttp.GitHubClient{K8sClient: k8sClient, GetClient: getClient},
+				Client:         k8sClient,
+				Scheme:         k8sClient.Scheme(),
+				GitInitializer: gitInitializer,
 			}
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -203,15 +206,13 @@ var _ = Describe("GitHubIssue Controller", func() {
 		It("should handle missing GitHub token", func() {
 			By("Setting up the mocked GitHub client with no token")
 
-			getClient := func(ctx context.Context, k8sClient client.Client) (*http.Client, error) {
-				return nil, errors.New("GitHub token is not set")
-			}
+			gitInitializer := &githubhttp.GitHubClientInitializer{K8sClient: nil}
 
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client:    k8sClient,
-				Scheme:    k8sClient.Scheme(),
-				GitClient: &githubhttp.GitHubClient{K8sClient: k8sClient, GetClient: getClient},
+				Client:         k8sClient,
+				Scheme:         k8sClient.Scheme(),
+				GitInitializer: gitInitializer,
 			}
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
@@ -228,15 +229,17 @@ var _ = Describe("GitHubIssue Controller", func() {
 
 			By("Setting up the mocked GitHub client")
 			issues := []maromdanaiov1alpha1.IssueResponse{}
-			getClient := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/2", 2)
+			getClient, err := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/2", 2)
+
+			gitInitializer := &githubhttp.GitHubClientInitializer{K8sClient: getClient}
 
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client:    k8sClient,
-				Scheme:    k8sClient.Scheme(),
-				GitClient: &githubhttp.GitHubClient{K8sClient: k8sClient, GetClient: getClient},
+				Client:         k8sClient,
+				Scheme:         k8sClient.Scheme(),
+				GitInitializer: gitInitializer,
 			}
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -255,23 +258,24 @@ var _ = Describe("GitHubIssue Controller", func() {
 		It("should handle a failed attempt to create a real GitHub issue", func() {
 
 			By("Setting up the mocked GitHub client to return a failure for post")
-			getClient := func(ctx context.Context, k8sClient client.Client) (*http.Client, error) {
-				mockedHTTPClient := mock.NewMockedHTTPClient(
-					mock.WithRequestMatchHandler(
-						mock.PostReposIssuesByOwnerByRepo,
-						http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							http.Error(w, "Failed to create issue", http.StatusInternalServerError)
-						}),
-					),
-				)
-				return &http.Client{Transport: mockedHTTPClient.Transport}, nil
-			}
+			mockedHTTPClient := mock.NewMockedHTTPClient(
+				mock.WithRequestMatchHandler(
+					mock.PostReposIssuesByOwnerByRepo,
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						http.Error(w, "Failed to create issue", http.StatusInternalServerError)
+					}),
+				),
+			)
+
+			getClient, _ := client.New(cfg, client.Options{HTTPClient: mockedHTTPClient})
+
+			gitInitializer := &githubhttp.GitHubClientInitializer{K8sClient: getClient}
 
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client:    k8sClient,
-				Scheme:    k8sClient.Scheme(),
-				GitClient: &githubhttp.GitHubClient{K8sClient: k8sClient, GetClient: getClient},
+				Client:         k8sClient,
+				Scheme:         k8sClient.Scheme(),
+				GitInitializer: gitInitializer,
 			}
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
@@ -295,29 +299,29 @@ var _ = Describe("GitHubIssue Controller", func() {
 					State:  "open",
 				},
 			}
-			getClient := func(ctx context.Context, k8sClient client.Client) (*http.Client, error) {
-				mockedHTTPClient := mock.NewMockedHTTPClient(
-					mock.WithRequestMatchHandler(
-						mock.GetReposIssuesByOwnerByRepo,
-						http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							_ = json.NewEncoder(w).Encode(issues)
-						}),
-					),
-					mock.WithRequestMatchHandler(
-						mock.PostReposIssuesByOwnerByRepo,
-						http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							http.Error(w, "Failed to update issue", http.StatusInternalServerError)
-						}),
-					),
-				)
-				return &http.Client{Transport: mockedHTTPClient.Transport}, nil
-			}
+			mockedHTTPClient := mock.NewMockedHTTPClient(
+				mock.WithRequestMatchHandler(
+					mock.GetReposIssuesByOwnerByRepo,
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						_ = json.NewEncoder(w).Encode(issues)
+					}),
+				),
+				mock.WithRequestMatchHandler(
+					mock.PostReposIssuesByOwnerByRepo,
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						http.Error(w, "Failed to update issue", http.StatusInternalServerError)
+					}),
+				),
+			)
+			getClient, _ := client.New(cfg, client.Options{HTTPClient: mockedHTTPClient})
+
+			gitInitializer := &githubhttp.GitHubClientInitializer{K8sClient: getClient}
 
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client:    k8sClient,
-				Scheme:    k8sClient.Scheme(),
-				GitClient: &githubhttp.GitHubClient{K8sClient: k8sClient, GetClient: getClient},
+				Client:         k8sClient,
+				Scheme:         k8sClient.Scheme(),
+				GitInitializer: gitInitializer,
 			}
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,

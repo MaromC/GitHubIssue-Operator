@@ -13,3 +13,7 @@ type GitClient interface {
 	CloseIssue(ctx context.Context, owner string, repo string, githubIssue *maromdanaiov1alpha1.GitHubIssue, logger logr.Logger) error
 	FindIssue(issues []maromdanaiov1alpha1.IssueResponse, title string) *maromdanaiov1alpha1.IssueResponse
 }
+
+type GitClientInitializer interface {
+	InitializeGit(ctx context.Context) (GitClient, error)
+}

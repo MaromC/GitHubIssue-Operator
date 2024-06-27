@@ -17,20 +17,12 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"crypto/tls"
-	"errors"
 	"flag"
-	"net/http"
+	githubhttp "my.domain/githubissue/internal/http"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"time"
-
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"golang.org/x/oauth2"
-	githubhttp "my.domain/githubissue/internal/http"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -51,11 +43,8 @@ import (
 )
 
 var (
-	scheme     = runtime.NewScheme()
-	setupLog   = ctrl.Log.WithName("setup")
-	secretName = "github-token"
-	secretKey  = "token"
-	namespace  = "github-operator-system"
+	scheme   = runtime.NewScheme()
+	setupLog = ctrl.Log.WithName("setup")
 )
 
 func init() {
@@ -141,10 +130,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	gitClientInitializer := &githubhttp.GitHubClientInitializer{
+		K8sClient:  mgr.GetClient(),
+		HttpClient: mgr.GetHTTPClient(),
+	}
+
 	if err = (&controller.GitHubIssueReconciler{
-		Client:    mgr.GetClient(),
-		Scheme:    mgr.GetScheme(),
-		GitClient: &githubhttp.GitHubClient{K8sClient: mgr.GetClient(), GetClient: GetClientFunc},
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		Logger:         ctrl.Log.WithName("controllers").WithName("GitHubIssue"),
+		GitInitializer: gitClientInitializer,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GitHubIssue")
 		os.Exit(1)
@@ -165,24 +160,4 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-}
-
-// GetClientFunc gets the authorized client
-func GetClientFunc(ctx context.Context, k8sClient client.Client) (*http.Client, error) {
-	secret := &corev1.Secret{}
-	err := k8sClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretName}, secret)
-	if err != nil {
-		return nil, errors.New("unable to read GitHub token secret: " + err.Error())
-	}
-
-	token, ok := secret.Data[secretKey]
-	if !ok {
-		return nil, errors.New("GitHub token not found in secret")
-	}
-
-	sourceToken := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: string(token)},
-	)
-	gitClient := oauth2.NewClient(ctx, sourceToken)
-	return gitClient, nil
 }

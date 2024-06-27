@@ -46,9 +46,9 @@ const (
 // GitHubIssueReconciler reconciles a GitHubIssue object
 type GitHubIssueReconciler struct {
 	client.Client
-	Scheme    *runtime.Scheme
-	Logger    logr.Logger
-	GitClient gitclient.GitClient
+	Scheme         *runtime.Scheme
+	Logger         logr.Logger
+	GitInitializer gitclient.GitClientInitializer
 }
 
 //+kubebuilder:rbac:groups=marom.dana.io.dana.io,resources=githubissues,verbs=get;list;watch;create;update;patch;delete
@@ -71,9 +71,14 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, nil
 	}
 
+	gitClient, err := r.GitInitializer.InitializeGit(ctx)
+	if err != nil {
+		r.Logger.Error(err, "Failed to initialize git client")
+		return ctrl.Result{}, err
+	}
 	owner, repo := GetOwnerAndRepo(*githubIssue)
 
-	if err := r.CheckDeletion(ctx, githubIssue, owner, repo, r.GitClient); err != nil {
+	if err := r.CheckDeletion(ctx, githubIssue, owner, repo, gitClient); err != nil {
 		if errors.Is(errors.Unwrap(err), errors.New("NamespaceLabel CR deletion has been handled")) ||
 			errors.Is(errors.Unwrap(err), errors.New("GitHubIssue CR may have been deleted")) {
 			return ctrl.Result{}, nil
@@ -81,15 +86,15 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	issues, err := r.GitClient.GetRepositoryIssues(ctx, owner, repo, r.Logger)
+	issues, err := gitClient.GetRepositoryIssues(ctx, owner, repo, r.Logger)
 	if err != nil {
 		r.Logger.Error(err, "Failed to list all repository issues")
 		return ctrl.Result{}, err
 	}
 
-	foundIssue := r.GitClient.FindIssue(issues, githubIssue.Spec.Title)
+	foundIssue := gitClient.FindIssue(issues, githubIssue.Spec.Title)
 
-	handledIssue, err := r.HandleIssues(foundIssue, ctx, owner, repo, githubIssue, r.GitClient)
+	handledIssue, err := r.HandleIssues(foundIssue, ctx, owner, repo, githubIssue, gitClient)
 	if err != nil {
 		r.Logger.Error(err, "Failed to create/update issue")
 		return ctrl.Result{}, err
@@ -105,7 +110,7 @@ func (r *GitHubIssueReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return ctrl.Result{}, nil
 }
 
-// HandleIssues creates an issue with the needed data if it dosent exist, if it does, it updated the existing issue.
+// HandleIssues creates an issue with the needed data if it doesn't exist, if it does, it updated the existing issue.
 func (r *GitHubIssueReconciler) HandleIssues(foundIssue *maromdanaiov1alpha1.IssueResponse, ctx context.Context, owner string, repo string, githubIssue *maromdanaiov1alpha1.GitHubIssue, gitClient gitclient.GitClient) (*maromdanaiov1alpha1.IssueResponse, error) {
 	if foundIssue == nil {
 		newIssue, err := gitClient.CreateIssue(ctx, owner, repo, githubIssue.Spec.Title, githubIssue.Spec.Description, r.Logger)
