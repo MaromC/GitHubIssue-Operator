@@ -131,8 +131,7 @@ func main() {
 	}
 
 	gitClientInitializer := &githubhttp.GitHubClientInitializer{
-		K8sClient:  mgr.GetClient(),
-		HttpClient: mgr.GetHTTPClient(),
+		K8sClient: mgr.GetClient(),
 	}
 
 	if err = (&controller.GitHubIssueReconciler{
