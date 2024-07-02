@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	corev1 "k8s.io/api/core/v1"
-	githubhttp "my.domain/githubissue/internal/http"
+	githubhttp "my.domain/githubissue/internal/clients/http"
 	"net/http"
 
 	"github.com/migueleliasweb/go-github-mock/src/mock"
@@ -126,7 +126,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 		// Test #1
 		It("should successfully reconcile the resource", func() {
 
-			By("Setting up the mocked GitHub client")
+			By("Setting up the mocked GitHub clients")
 			issues := []maromdanaiov1alpha1.IssueResponse{}
 			getClient, err := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/1", 1)
 
@@ -168,7 +168,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 		// Test #2
 		It("should update the issue if it already exists", func() {
 
-			By("Setting up the mocked GitHub client")
+			By("Setting up the mocked GitHub clients")
 			issues := []maromdanaiov1alpha1.IssueResponse{
 				{
 					URL:    "https://api.github.com/repos/owner/repo/issues/1",
@@ -204,7 +204,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 
 		// Test #3
 		It("should handle missing GitHub token", func() {
-			By("Setting up the mocked GitHub client with no token")
+			By("Setting up the mocked GitHub clients with no token")
 
 			gitInitializer := &githubhttp.GitHubClientInitializer{K8sClient: nil}
 
@@ -227,7 +227,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 		// Test #4
 		It("should handle deletion of the GitHubIssue resource", func() {
 
-			By("Setting up the mocked GitHub client")
+			By("Setting up the mocked GitHub clients")
 			issues := []maromdanaiov1alpha1.IssueResponse{}
 			getClient, err := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/2", 2)
 
@@ -257,7 +257,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 		// Test #5
 		It("should handle a failed attempt to create a real GitHub issue", func() {
 
-			By("Setting up the mocked GitHub client to return a failure for post")
+			By("Setting up the mocked GitHub clients to return a failure for post")
 			mockedHTTPClient := mock.NewMockedHTTPClient(
 				mock.WithRequestMatchHandler(
 					mock.PostReposIssuesByOwnerByRepo,
@@ -289,7 +289,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 		// Test #6
 		It("should handle a failed attempt to update a GitHub issue", func() {
 
-			By("Setting up the mocked GitHub client to return a failure for post")
+			By("Setting up the mocked GitHub clients to return a failure for post")
 			issues := []maromdanaiov1alpha1.IssueResponse{
 				{
 					URL:    "https://api.github.com/repos/owner/repo/issues/1",
