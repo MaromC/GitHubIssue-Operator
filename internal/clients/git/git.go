@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+
 	"github.com/go-logr/logr"
 	"golang.org/x/oauth2"
 	corev1 "k8s.io/api/core/v1"
 	maromdanaiov1alpha1 "my.domain/githubissue/api/v1alpha1"
 	httpClient "my.domain/githubissue/internal/clients/http"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

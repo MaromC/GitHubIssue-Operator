@@ -20,8 +20,9 @@ import (
 	"crypto/tls"
 	"flag"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	// Import all Kubernetes clients auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.

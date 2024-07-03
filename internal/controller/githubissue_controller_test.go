@@ -20,9 +20,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	corev1 "k8s.io/api/core/v1"
-	githubhttp "my.domain/githubissue/internal/clients/http"
 	"net/http"
+
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/migueleliasweb/go-github-mock/src/mock"
 	. "github.com/onsi/ginkgo/v2"
@@ -130,13 +130,10 @@ var _ = Describe("GitHubIssue Controller", func() {
 			issues := []maromdanaiov1alpha1.IssueResponse{}
 			getClient, err := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/1", 1)
 
-			gitInitializer := &githubhttp.GitHubClientInitializer{K8sClient: getClient}
-
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client:         k8sClient,
-				Scheme:         k8sClient.Scheme(),
-				GitInitializer: gitInitializer,
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
 			}
 
 			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
@@ -180,13 +177,10 @@ var _ = Describe("GitHubIssue Controller", func() {
 			}
 			getClient, err := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/1", 1)
 
-			gitInitializer := &githubhttp.GitHubClientInitializer{K8sClient: getClient}
-
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client:         k8sClient,
-				Scheme:         k8sClient.Scheme(),
-				GitInitializer: gitInitializer,
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
 			}
 			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
@@ -206,13 +200,10 @@ var _ = Describe("GitHubIssue Controller", func() {
 		It("should handle missing GitHub token", func() {
 			By("Setting up the mocked GitHub clients with no token")
 
-			gitInitializer := &githubhttp.GitHubClientInitializer{K8sClient: nil}
-
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client:         k8sClient,
-				Scheme:         k8sClient.Scheme(),
-				GitInitializer: gitInitializer,
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
 			}
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
@@ -231,13 +222,10 @@ var _ = Describe("GitHubIssue Controller", func() {
 			issues := []maromdanaiov1alpha1.IssueResponse{}
 			getClient, err := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/2", 2)
 
-			gitInitializer := &githubhttp.GitHubClientInitializer{K8sClient: getClient}
-
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client:         k8sClient,
-				Scheme:         k8sClient.Scheme(),
-				GitInitializer: gitInitializer,
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
 			}
 			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
@@ -269,13 +257,10 @@ var _ = Describe("GitHubIssue Controller", func() {
 
 			getClient, _ := client.New(cfg, client.Options{HTTPClient: mockedHTTPClient})
 
-			gitInitializer := &githubhttp.GitHubClientInitializer{K8sClient: getClient}
-
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client:         k8sClient,
-				Scheme:         k8sClient.Scheme(),
-				GitInitializer: gitInitializer,
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
 			}
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
@@ -315,13 +300,10 @@ var _ = Describe("GitHubIssue Controller", func() {
 			)
 			getClient, _ := client.New(cfg, client.Options{HTTPClient: mockedHTTPClient})
 
-			gitInitializer := &githubhttp.GitHubClientInitializer{K8sClient: getClient}
-
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client:         k8sClient,
-				Scheme:         k8sClient.Scheme(),
-				GitInitializer: gitInitializer,
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
 			}
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
