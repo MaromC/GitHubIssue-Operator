@@ -128,11 +128,11 @@ var _ = Describe("GitHubIssue Controller", func() {
 
 			By("Setting up the mocked GitHub clients")
 			issues := []maromdanaiov1alpha1.IssueResponse{}
-			getClient, err := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/1", 1)
+			mockClient, err := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/1", 1)
 
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client: k8sClient,
+				Client: mockClient,
 				Scheme: k8sClient.Scheme(),
 			}
 
@@ -175,11 +175,11 @@ var _ = Describe("GitHubIssue Controller", func() {
 					State:  "open",
 				},
 			}
-			getClient, err := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/1", 1)
+			mockClient, err := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/1", 1)
 
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client: k8sClient,
+				Client: mockClient,
 				Scheme: k8sClient.Scheme(),
 			}
 			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
@@ -220,11 +220,11 @@ var _ = Describe("GitHubIssue Controller", func() {
 
 			By("Setting up the mocked GitHub clients")
 			issues := []maromdanaiov1alpha1.IssueResponse{}
-			getClient, err := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/2", 2)
+			mockClient, err := setUpMockedClient(issues, "https://api.github.com/repos/owner/repo/issues/2", 2)
 
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client: k8sClient,
+				Client: mockClient,
 				Scheme: k8sClient.Scheme(),
 			}
 			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
@@ -255,11 +255,11 @@ var _ = Describe("GitHubIssue Controller", func() {
 				),
 			)
 
-			getClient, _ := client.New(cfg, client.Options{HTTPClient: mockedHTTPClient})
+			mockClient, _ := client.New(cfg, client.Options{HTTPClient: mockedHTTPClient})
 
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client: k8sClient,
+				Client: mockClient,
 				Scheme: k8sClient.Scheme(),
 			}
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
@@ -298,11 +298,11 @@ var _ = Describe("GitHubIssue Controller", func() {
 					}),
 				),
 			)
-			getClient, _ := client.New(cfg, client.Options{HTTPClient: mockedHTTPClient})
+			mockClient, _ := client.New(cfg, client.Options{HTTPClient: mockedHTTPClient})
 
 			By("Reconciling the created resource")
 			controllerReconciler := &GitHubIssueReconciler{
-				Client: k8sClient,
+				Client: mockClient,
 				Scheme: k8sClient.Scheme(),
 			}
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{

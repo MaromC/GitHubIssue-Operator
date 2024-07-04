@@ -19,7 +19,7 @@ var (
 	APIBaseURL    = "https://api.github.com"
 	open          = "open"
 	closed        = "closed"
-	url           = "%s/repos/%s/%s/issues/"
+	url           = "%s/repos/%s/%s/issues"
 	urlWithNumber = "%s/repos/%s/%s/issues/%d"
 	secretName    = "github-token"
 	secretKey     = "token"
@@ -62,6 +62,7 @@ func (g *GitHubClientInitializer) InitializeGit(ctx context.Context) (GitClient,
 	HttpClient := &httpClient.HttpClient{
 		Client: oauth2Client,
 	}
+
 	return &GitHubClient{HttpClient: HttpClient}, nil
 }
 
@@ -75,7 +76,7 @@ func (r *GitHubClient) GetRepositoryIssues(owner string, repo string, logger log
 
 	issue := maromdanaiov1alpha1.IssueRequest{}
 
-	response, err := r.HttpClient.SendRequest(url, http.MethodGet, issue, logger)
+	response, err := r.HttpClient.SendRequest(url, http.MethodGet, issue)
 	if err != nil {
 		logger.Error(err, "failed to list all github issues")
 		return nil, err
@@ -105,7 +106,7 @@ func (r *GitHubClient) CreateIssue(ctx context.Context, owner string, repo strin
 		State: "open",
 	}
 
-	response, err := r.HttpClient.SendRequest(url, http.MethodPost, issue, logger)
+	response, err := r.HttpClient.SendRequest(url, http.MethodPost, issue)
 
 	if err != nil {
 		logger.Error(err, "Failed to send request with status code", response.StatusCode)
@@ -140,7 +141,7 @@ func (r *GitHubClient) CloseIssue(ctx context.Context, owner string, repo string
 		Body:  githubIssue.Spec.Description,
 	}
 
-	response, err := r.HttpClient.SendRequest(url, http.MethodPost, issue, logger)
+	response, err := r.HttpClient.SendRequest(url, http.MethodPost, issue)
 
 	var result maromdanaiov1alpha1.IssueResponse
 	if err = json.NewDecoder(response.Body).Decode(&result); err != nil {
@@ -160,7 +161,7 @@ func (r *GitHubClient) UpdateIssue(ctx context.Context, owner string, repo strin
 		State: open,
 	}
 
-	response, err := r.HttpClient.SendRequest(url, http.MethodPost, issue, logger)
+	response, err := r.HttpClient.SendRequest(url, http.MethodPost, issue)
 
 	var result maromdanaiov1alpha1.IssueResponse
 	if err = json.NewDecoder(response.Body).Decode(&result); err != nil {

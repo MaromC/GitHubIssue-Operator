@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-
-	"github.com/go-logr/logr"
 )
 
 var (
@@ -20,7 +18,7 @@ type HttpClient struct {
 }
 
 // SendRequest sends a request to github.
-func (r *HttpClient) SendRequest(url string, method string, body interface{}, logger logr.Logger) (*http.Response, error) {
+func (r *HttpClient) SendRequest(url string, method string, body interface{}) (*http.Response, error) {
 
 	requestBody, err := json.Marshal(body)
 	if err != nil {
@@ -38,13 +36,6 @@ func (r *HttpClient) SendRequest(url string, method string, body interface{}, lo
 	if err != nil {
 		return nil, err
 	}
-
-	defer func() {
-		err := response.Body.Close()
-		if err != nil {
-			logger.Error(err, "failed closing response body")
-		}
-	}()
 
 	return response, nil
 }

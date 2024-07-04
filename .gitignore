@@ -27,3 +27,6 @@ go.work
 *~
 
 filebeat-7.17.22-linux-x86_64/*
+
+*.tar.gz
+*tar.gz.*
