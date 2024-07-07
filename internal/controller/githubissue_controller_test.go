@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+   http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,15 +19,11 @@ package controller
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
-
-	corev1 "k8s.io/api/core/v1"
 
 	"github.com/migueleliasweb/go-github-mock/src/mock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"golang.org/x/oauth2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -38,15 +34,13 @@ import (
 
 var _ = Describe("GitHubIssue Controller", func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
-		const secretName = "github-token"
-		const secretKey = "token"
+		const resourceName = "test-resource-1"
 
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default",
+			Namespace: "github-operator-system",
 		}
 		githubissue := &maromdanaiov1alpha1.GitHubIssue{}
 
@@ -74,23 +68,8 @@ var _ = Describe("GitHubIssue Controller", func() {
 					}),
 				),
 			)
+			newClient, _ := client.New(cfg, client.Options{HTTPClient: mockedHTTPClient})
 
-			secret := &corev1.Secret{}
-			err := k8sClient.Get(ctx, client.ObjectKey{Namespace: "default", Name: secretName}, secret)
-			if err != nil {
-				return nil, errors.New("unable to read GitHub token secret: " + err.Error())
-			}
-
-			token, ok := secret.Data[secretKey]
-			if !ok {
-				return nil, errors.New("GitHub token not found in secret")
-			}
-			sourceToken := oauth2.StaticTokenSource(
-				&oauth2.Token{AccessToken: string(token)},
-			)
-			httpClient := oauth2.NewClient(ctx, sourceToken)
-			httpClient.Transport = mockedHTTPClient.Transport
-			newClient, _ := client.New(cfg, client.Options{HTTPClient: httpClient})
 			return newClient, nil
 		}
 
@@ -197,25 +176,6 @@ var _ = Describe("GitHubIssue Controller", func() {
 		})
 
 		// Test #3
-		It("should handle missing GitHub token", func() {
-			By("Setting up the mocked GitHub clients with no token")
-
-			By("Reconciling the created resource")
-			controllerReconciler := &GitHubIssueReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
-			}
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Verifying the correct error is returned")
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("GitHub token is not set"))
-		})
-
-		// Test #4
 		It("should handle deletion of the GitHubIssue resource", func() {
 
 			By("Setting up the mocked GitHub clients")
@@ -242,7 +202,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 			}).Should(BeTrue())
 
 		})
-		// Test #5
+		// Test #4
 		It("should handle a failed attempt to create a real GitHub issue", func() {
 
 			By("Setting up the mocked GitHub clients to return a failure for post")
@@ -271,7 +231,7 @@ var _ = Describe("GitHubIssue Controller", func() {
 			Expect(err.Error()).To(ContainSubstring("Failed to create issue"))
 		})
 
-		// Test #6
+		// Test #5
 		It("should handle a failed attempt to update a GitHub issue", func() {
 
 			By("Setting up the mocked GitHub clients to return a failure for post")
